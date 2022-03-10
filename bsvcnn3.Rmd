@@ -1,0 +1,176 @@
+---
+title: "bsvcnn3"
+output: html_document
+---
+
+Use a new (smaller) mask `/well/nichols/users/kfh142/data/Atlas/CIC/MultRes` namely `CICatlas_Res3_2mm.nii.gz`
+
+```{r}
+temp.img <-oro.nifti::readNIfTI('/well/nichols/users/kfh142/data/Atlas/CIC/MultRes/CICatlas_Res3_2mm.nii.gz')
+length(unique(c(temp.img))) #number of region
+```
+Take `Res3` where `HO-combined-fin.nii.gz` is non-zero
+
+```{r}
+mask.com<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+
+temp.img[mask.com==0] <- 0
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,paste0('/well/nichols/users/qcv214/bnn2/res3/res3mask'))
+```
+Then only keep GM using `CICatlas_Res3_trunc.txt`.
+
+
+In fact let's not threshold by `HO-combined-fin.nii.gz`
+
+`CICatlas_Res3_trunc.txt ` says everything above label 12 is not GM, then threshold at 0.1, so 
+```{r}
+temp.img <-oro.nifti::readNIfTI('/well/nichols/users/kfh142/data/Atlas/CIC/MultRes/CICatlas_Res3_2mm.nii.gz')
+#Take only grey matter
+temp.img[temp.img>12] <- 0
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,paste0('/well/nichols/users/qcv214/bnn2/res3/res3mask'))
+#Load data with new unthreshold mask
+part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
+part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1:(dim(part_use)[1]),1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz')
+res3.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask') 
+#threshold at 0.1
+dat_colmeans<-colMeans(res3.dat)
+temp.img[temp.img>1][dat_colmeans<0.1] <- 0 
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,'/well/nichols/users/qcv214/bnn2/res3/res3mask')
+#Load data again using the new thresholded mask
+res3.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask') # 4263 x 163375
+#save datat
+write_feather(as.data.frame(res3.dat), '/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather')
+#reload data and mask
+res3.dat <- read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather') #dim = 4263 124859
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask.reg <- setdiff(sort(unique(c(res3.mask))),0)
+```
+
+##Create mask ROI
+Don't RUN
+```{r}
+#Don't RUN
+res3.mask.reg <- sort(unique(c(res3.mask)))
+for(i in res3.mask.reg){
+  temp.img <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+  temp.img <- temp.img == i 
+  temp.img@datatype = 2
+  temp.img@bitpix = 8
+  writeNIfTI(temp.img,paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',i))
+  temp.dat <- fast_read_imgs_mask(list_of_all_images,paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',i)) # 4263 x 163375
+  write_feather(as.data.frame(temp.dat), paste0('/well/nichols/users/qcv214/bnn2/res3/roi/dat_ROI_',i))
+}
+```
+
+Create `rearranged data`
+```{r}
+#dat.temp <- matrix(nrow = nrow(res3.dat),ncol = sum(res3.mask>0))
+dat.temp <- matrix(nrow = nrow(res3.dat),ncol = 1)
+  cum.length <- 0
+for(i in res3.mask.reg){
+  roi.reg<- read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/dat_ROI_",i,'.feather'))
+  print(dim(roi.reg))
+  cum.length <- cum.length + ncol(roi.reg)
+  print(cum.length)
+  roi.reg<- as.matrix(roi.reg)
+  dat.temp <- cbind(dat.temp, roi.reg)
+}
+colnames(dat.temp) <- NULL
+dat.temp <- as.data.frame(dat.temp[,-1])
+dat.temp <- as.matrix(dat.temp)
+write_feather(as.data.frame(dat.temp), '/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather')
+```
+
+Try loading partial gp from `partial_gp.R`
+```{r}
+  poly_degree = 10
+  a_concentration = 0.5
+  b_smoothness = 40
+test.partial.gp <- read_feather("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_1_fixed_100.540.feather")
+```
+
+
+#7 Mar
+Save age to a file
+```{r}
+part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
+part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+# 
+agetab<-read.table(file = '/well/nichols/projects/UKB/SMS/ukb_latest-Age.tsv', sep = '\t', header = TRUE)
+age_tab<-as.data.frame(matrix(,nrow = length(part_use$V1),ncol = 2)) #id, age, number of masked voxels
+colnames(age_tab)[1:2]<-c('id','age')
+age_tab$id<-part_use$V1
+for(i in 1:length(part_use$V1)){
+  age_tab$age[i]<-agetab$X21003.2.0[agetab$eid_8107==sub(".", "",age_tab$id[i])]
+}
+write_feather(age_tab, '/well/nichols/users/qcv214/bnn2/res3/age.feather')
+```
+
+#8 Mar
+Load data from `nn_lr.R`
+```{r}
+num.batch <- 4
+epoch <- 10
+
+lr_vec <- c(1,10^-(5:11)) #Note that 1 is not lr = 1, but lr = 1e-4
+res.nn.loss <- array(, dim = c(2,8,num.batch*epoch )) 
+for( i in lr_vec){  
+  res.nn.loss[,which(i==lr_vec),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_loss_",i,".csv")))
+}
+```
+Plot training rmse
+```{r}
+line.type <- 'l'
+plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))))
+# lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 2)
+lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 3)
+# lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 4)
+lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 5)
+# lines(sqrt(res.nn.loss[1,6,]),type=line.type,col = 6)
+lines(sqrt(res.nn.loss[1,7,]),type=line.type,col = 7)
+# lines(sqrt(res.nn.loss[1,8,]),type=line.type,col = 8)
+
+#out-of-sample
+plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))))
+# lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 2)
+lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 3)
+# lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 4)
+lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 5)
+# lines(sqrt(res.nn.loss[2,6,]),type=line.type,col = 6)
+lines(sqrt(res.nn.loss[2,7,]),type=line.type,col = 7)
+# lines(sqrt(res.nn.loss[2,8,]),type=line.type,col = 8)
+```
+
+
+
+plot some
+```{r}
+line.type <- 'b'
+plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE")
+lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[1,7,]),type=line.type,col = 12,lwd=2)
+abline(v=4*1:10,lwd=0.2)
+
+#out-of-sample
+plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))),lwd=2,
+     main = "Out-of-sample RMSE",
+     ylab = "Batch RMSE")
+lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[2,7,]),type=line.type,col = 12,lwd=2)
+abline(v=4*1:10,lwd=0.2)
+
+legend('bottomright',legend = c('learning_rate','1e-4','1e-6','1e-8','1e-10'), pch = 1,col=c("white",1,3,10,12))
+```

@@ -1,0 +1,1098 @@
+---
+title: "bsvcnn2"
+output: html_document
+---
+
+Lost work on Fri 4th
+
+Load result of grid search whole brain 27th Jan
+```{r}
+poly_degree = 40
+a_concentration= 0.001
+b_smoothness= 0.1
+dimension = 3
+bsvcnn.wb<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.wb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bsvcnn/pile/bsvcnn27Jan_",i,".csv")))
+}
+#bsvcnn.wb<-bsvcnn.wb[-failed_run,,]
+bsvcnn.wb.m<-apply(bsvcnn.wb, c(2,3), median)
+
+```
+
+
+Lost work on Fri 11th
+
+
+Load default
+GP: `/well/nichols/users/qcv214/bsvcnn/pile/fin_full_gp_100.010.001.nii.gz`
+```{r}
+bsvcnn.11feb.def<-array(,dim=c(50,3,14))
+poly_degree = 10
+a_concentration= 0.01
+b_smoothness= 0.001
+failed_run<-c(2,34,35)
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.11feb.def[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bsvcnn/pile/bsvcnn10feb_",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.11feb.def.m<-apply(bsvcnn.11feb.def, c(2,3), median)
+```
+Load scattered
+GP:  `/well/nichols/users/qcv214/bsvcnn/pile/fin_full_gp_400.0010.1.nii.gz`
+```{r}
+bsvcnn.11feb.ext<-array(,dim=c(50,3,14))
+poly_degree = 40
+a_concentration= 0.001
+b_smoothness= 0.1
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.11feb.ext[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bsvcnn/pile/bsvcnn10feb_",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+#hs.mfvb.m<-fin.out.hs[-failed_run,]
+bsvcnn.11feb.ext.m<-apply(bsvcnn.11feb.ext, c(2,3), median)
+```
+
+```{r}
+plot.box(bsvcnn.11feb.def)
+```
+
+```{r}
+plot.box(bsvcnn.11feb.ext)
+```
+
+I believe latest data is `/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_dat_rearranged.feather`
+
+So plot gp back to brain,
+
+
+
+#library
+```{r}
+if (!require("pacman")) {install.packages("pacman");library(pacman)}
+p_load(BayesGPfit)
+p_load(PMS)
+p_load(oro.nifti)
+p_load(neurobase)
+p_load(feather)
+p_load(glmnet)
+p_load(fastBayesReg)
+p_load(truncnorm)
+```
+
+
+
+#13 feb
+Load the the optimal combination of each 
+
+```{r}
+mask.com<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+mask.reg <- sort(setdiff(unique(c(mask.com)),c(0)))
+```
+
+```{r}
+deg_vec<- c(10,20,30,40)
+a_vec  <- c(0.00001,0.0001,0.001,0.1,1)
+b_vec  <- c(0.001,0.1,1,2,4)
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bsvcnn/pile/combined/gs10feb_ROI_",i,".csv")))
+}
+#sum(gs.opt[,1]==gs.opt[,2]) = 110 
+```
+optimising rmse is same as rsq
+
+
+plot result of `gs_plot_gp.R`
+```{r}
+deg_vec<- c(10,20,30,40)
+a_vec  <- c(0.00001,0.0001,0.001,0.1,1)
+b_vec  <- c(0.001,0.1,1,2,4)
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+mask.com.temp<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+for(i in mask.reg){
+  poly_degree = param_grid[gs.opt[which(i==(mask.reg))],1]
+  a_concentration= param_grid[gs.opt[which(i==(mask.reg))],2]
+  b_smoothness= param_grid[gs.opt[which(i==(mask.reg))],3]
+  mask.temp <- oro.nifti::readNIfTI(paste0("/well/nichols/users/qcv214/bsvcnn/pile/combined/gs_fin_mask_ROI_",i,"_gp_",poly_degree,a_concentration,b_smoothness)) 
+  mask.com.temp[mask.com.temp == i] <- mask.temp[mask.temp != 0]
+  print(i)
+}
+mask.com.temp@datatype = 16
+mask.com.temp@bitpix = 32
+writeNIfTI(mask.com.temp,'/well/nichols/users/qcv214/bnn2/pile/full_gs_gp')
+```
+
+
+Assess number of deg used
+```{r}
+table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])
+table(param_grid[gs.opt[,1],3])
+```
+
+
+Load result 14feb gs
+```{r}
+bsvcnn.14feb<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.14feb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/bsvcnn14feb_gs_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.14feb.m<-apply(bsvcnn.14feb, c(2,3), median)
+```
+
+```{r}
+plot.box(bsvcnn.14feb)
+```
+
+Load result 14feb gs SCALED
+```{r}
+bsvcnn.14feb.sc<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.14feb.sc[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/bsvcnn14feb_gs_sc_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.14feb.sc.m<-apply(bsvcnn.14feb.sc, c(2,3), median)
+```
+
+```{r}
+plot.box(bsvcnn.14feb.sc)
+```
+
+Load pca_lm
+```{r}
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+```
+
+```{r}
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  pca_lm.m[14]
+```
+Use just seed 4 with r^2 = -97 and rmse = 10.8
+```{r}
+pca_lm.pred<-matrix(,nrow=2,ncol=2000)
+      pca_lm.pred[1,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_inpred_",4,".csv")))
+      pca_lm.pred[2,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_outpred_",4,".csv")))
+```
+
+```{r}
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_",4,".csv")))
+```
+Plot
+```{r}
+num_part<- 2000
+num_test<- 2000
+set.seed(4)
+ind.to.use <- get_ind(num_part,num_test)
+#in-sample
+plot(age_tab$age[ind.to.use$train],pca_lm.pred[1,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(age_tab$age[ind.to.use$train] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+
+#out-sample
+plot(age_tab$age[ind.to.use$test],pca_lm.pred[2,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(age_tab$age[ind.to.use$test] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+```{r}
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "out-sample" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+######
+Load 50% thresholded PCA
+```{r}
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm50_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+```
+
+```{r}
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  pca_lm.m[14]
+```
+
+```{r}
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred50_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+Try 25
+######
+Load 25% thresholded PCA
+```{r}
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm25_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+```
+```{r}
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  pca_lm.m[14]
+```
+```{r}
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred25_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+
+#Quick sanity check 
+if `/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_dat_rearranged.feather` is correct via asssssing `/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_dat_ROI_`
+```{r}
+dat_allmat <- read_feather('/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_dat_rearranged.feather')
+dat_allmat <- as.matrix(dat_allmat)
+mask.com<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+mask.ind <- mask.com[mask.com>0]
+
+```
+```{r}
+#check
+reg.num <-2
+roi.reg<- read_feather(paste0("/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_dat_ROI_",reg.num))
+roi.reg<- as.matrix(roi.reg)
+#sum(dat_allmat[1,1:length( roi.reg[1,])] == roi.reg[1,])/length( roi.reg[1,])
+sum(dat_allmat[1,5322:(5322+length( roi.reg[1,])-1)] == roi.reg[1,])/length( roi.reg[1,])
+```
+Re-rearrange data
+```{r}
+mask.reg <- sort(setdiff(unique(c(mask.com)),c(0)))
+dat.temp <- matrix(nrow = nrow(dat_allmat),ncol = sum(mask.com>0))
+for(i in mask.reg){
+  roi.reg<- read_feather(paste0("/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_dat_ROI_",i))
+  roi.reg<- as.matrix(roi.reg)
+  dat.temp <- cbind(dat.temp, roi.reg)
+}
+colnames(dat.temp) <- NULL
+dat.temp <- as.data.frame(dat.temp[,-1])
+dat.temp <- as.matrix(dat.temp)
+write_feather(as.data.frame(dat.temp), '/well/nichols/users/qcv214/bnn2/pile/dat_rearranged2.feather')
+```
+Above is actually all correct
+
+
+#16feb
+Load 25% unscaled PCA only has 1 pc yet still overfit (or underfit??) wtf
+Load 90% unscaled PCA
+```{r}
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_usc90_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  pca_lm.m[14]
+  
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc90_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+50%
+```{r}
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_usc50_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  pca_lm.m[14]
+  
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc50_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+25%
+```{r}
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_usc25_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  pca_lm.m[14]
+  
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc25_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+Check distribution of training and testing age
+```{r}
+plot(histogram(pca_lm.pred[1,]))
+plot(histogram(pca_lm.pred[2,]))
+```
+
+##Re-scale the coordinate
+```{r}
+mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_mask_ROI_',1))
+nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
+  #re-centre each region
+nb.centred <- sweep(nb$maskcoords,2,apply(nb$maskcoords,2,median),"-")
+nb.centred <- sweep(nb$maskcoords,2,apply(nb$maskcoords,2,mean),"-")
+nb.norm <- apply(nb.centred,2,norm.func)
+
+```
+```{r}
+norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
+```
+```{r}
+nb.centred.1 <- sweep(nb$maskcoords,2,apply(nb$maskcoords,2,median),"-")
+nb.centred.2 <- sweep(nb$maskcoords,2,apply(nb$maskcoords,2,mean),"-")
+nb.norm.1 <- apply(nb.centred.1,2,norm.func)
+nb.norm.2 <- apply(nb.centred.2,2,norm.func)
+summary(nb.norm.1)
+summary(nb.norm.2)
+```
+
+
+#17Feb
+Load default
+GP: `/well/nichols/users/qcv214/bsvcnn/pile/fin_full_gp_100.010.001.nii.gz`
+```{r}
+bsvcnn.18feb.def<-array(,dim=c(50,3,14))
+poly_degree = 10
+a_concentration= 0.01
+b_smoothness= 0.001
+failed_run<-c(23)
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.18feb.def[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bsvcnn/pile/bsvcnn18feb_rescale_",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+bsvcnn.18feb.def<-bsvcnn.18feb.def[-failed_run,,]
+bsvcnn.18feb.def.m<-apply(bsvcnn.18feb.def, c(2,3), median)
+```
+Load scattered
+GP:  `/well/nichols/users/qcv214/bsvcnn/pile/fin_full_gp_400.0010.1.nii.gz`
+```{r}
+bsvcnn.18feb.ext<-array(,dim=c(50,3,14))
+poly_degree = 40
+a_concentration= 0.001
+b_smoothness= 0.1
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.18feb.ext[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bsvcnn/pile/bsvcnn18feb_rescale_",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+#hs.mfvb.m<-fin.out.hs[-failed_run,]
+bsvcnn.18feb.ext.m<-apply(bsvcnn.18feb.ext, c(2,3), median)
+```
+
+```{r}
+plot.box(bsvcnn.18feb.def)
+```
+
+```{r}
+plot.box(bsvcnn.18feb.ext)
+```
+
+
+#18 Feb
+Load result 18feb gs
+```{r}
+bsvcnn.18feb<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.18feb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/bsvcnn18feb_gs_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.18feb.m<-apply(bsvcnn.18feb, c(2,3), median)
+```
+
+```{r}
+plot.box(bsvcnn.18feb)
+```
+
+Load result 18feb gs
+```{r}
+bsvcnn.18feb<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.18feb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/bsvcnn18feb_gs_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.18feb.m<-apply(bsvcnn.18feb, c(2,3), median)
+```
+
+```{r}
+plot.box(bsvcnn.18feb)
+```
+
+Plot gp
+```{r}
+mask.com<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+mask.reg <- sort(setdiff(unique(c(mask.com)),c(0)))
+```
+```{r}
+deg_vec<- c(10,20,30,40)
+a_vec  <- c(0.00001,0.0001,0.001,0.1,1)
+b_vec  <- c(0.001,0.1,1,2,4)
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs18feb_ROI_",i,".csv")))
+}
+#sum(gs.opt[,1]==gs.opt[,2]) = 110 
+#plot result of `gs_plot_gp.R`
+mask.com.temp<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+for(i in mask.reg){
+  poly_degree = param_grid[gs.opt[which(i==(mask.reg))],1]
+  a_concentration= param_grid[gs.opt[which(i==(mask.reg))],2]
+  b_smoothness= param_grid[gs.opt[which(i==(mask.reg))],3]
+  mask.temp <- oro.nifti::readNIfTI(paste0("/well/nichols/users/qcv214/bnn2/pile/gs_fin_mask_ROI_",i,"_gp_",poly_degree,a_concentration,b_smoothness)) 
+  mask.com.temp[mask.com.temp == i] <- mask.temp[mask.temp != 0]
+  #print(i)
+}
+mask.com.temp@datatype = 16
+mask.com.temp@bitpix = 32
+writeNIfTI(mask.com.temp,'/well/nichols/users/qcv214/bnn2/viz/full_gs_gp')
+```
+Assess number of deg used
+```{r}
+table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])
+table(param_grid[gs.opt[,1],3])
+```
+Note here that many fall into b = 4, so might need to increase
+
+plot default
+```{r}
+poly_degree = 10
+a_concentration= 0.01
+b_smoothness= 0.001
+mask.com.temp<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+for(i in mask.reg){
+  mask.temp <- oro.nifti::readNIfTI(paste0("/well/nichols/users/qcv214/bnn2/pile/mask_ROI_",i,"_gp_",poly_degree,a_concentration,b_smoothness)) 
+  mask.com.temp[mask.com.temp == i] <- mask.temp[mask.temp != 0]
+  # print(i)
+}
+mask.com.temp@datatype = 16
+mask.com.temp@bitpix = 32
+writeNIfTI(mask.com.temp,'/well/nichols/users/qcv214/bnn2/viz/def_rescale')
+```
+plot scattered
+```{r}
+poly_degree = 40
+a_concentration= 0.001
+b_smoothness= 0.1
+mask.com.temp<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+for(i in mask.reg){
+  mask.temp <- oro.nifti::readNIfTI(paste0("/well/nichols/users/qcv214/bnn2/pile/mask_ROI_",i,"_gp_",poly_degree,a_concentration,b_smoothness)) 
+  mask.com.temp[mask.com.temp == i] <- mask.temp[mask.temp != 0]
+  # print(i)
+}
+mask.com.temp@datatype = 16
+mask.com.temp@bitpix = 32
+writeNIfTI(mask.com.temp,'/well/nichols/users/qcv214/bnn2/viz/scatter_rescale')
+```
+
+
+#20feb
+
+Load re-scaled whole brain from `whole_brain.R`
+```{r}
+bsvcnn.21feb.wb<-array(,dim=c(50,3,14))
+poly_degree = 40
+a_concentration=0.0001
+b_smoothness=2
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+
+      bsvcnn.21feb.wb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/whole_brain",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+#bsvcnn.21feb.wb.m.m<-bsvcnn.21feb.wb.m[-failed_run,]
+bsvcnn.21feb.wb.m<-apply(bsvcnn.21feb.wb, c(2,3), median)
+```
+```{r}
+plot.box(bsvcnn.21feb.wb)
+```
+
+
+
+#23 Feb
+Try loading Smoothed image from `/well/nichols/projects/UKB/IMAGING/T1_vbm_s2/smoothed_T1`
+```{r}
+im.temp  <- oro.nifti::readNIfTI('/well/nichols/projects/UKB/IMAGING/T1_vbm_s2/smoothed_T1/24847813_GM_s2.nii.gz')
+```
+I have saved the top 4263 particpants using `ls -U | head -4263` in `/well/nichols/users/qcv214/bnn2/smooth/part_list_smooth.txt`
+```{r}
+part_use<-read.table('/well/nichols/users/qcv214/bnn2/smooth/part_list_smooth.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+
+mask.com<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+list_of_all_images<-paste0('/well/nichols/projects/UKB/IMAGING/T1_vbm_s2/smoothed_T1/',part_use[,1])
+# read multiple image files on brain maskdim
+dat.sm <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz') #totally equal to dat_allmat
+write_feather(as.data.frame(dat.sm), '/well/nichols/users/qcv214/bnn2/smooth/dat_sm.feather')
+```
+Get age
+```{r}
+agetab<-read.table(file = '/well/nichols/projects/UKB/SMS/ukb_latest-Age.tsv', sep = '\t', header = TRUE)
+age_tab<-as.data.frame(matrix(,nrow = length(part_use$V1),ncol = 2)) #id, age, number of masked voxels
+colnames(age_tab)[1:2]<-c('id','age')
+age_tab$id<-substring(part_use$V1,1,8)
+for(i in 1:length(part_use$V1)){
+  age_tab$age[i]<-agetab$X21003.2.0[agetab$eid_8107==sub(".", "",age_tab$id[i])]
+}
+#plot(histogram(age_tab$age))
+write.csv(age_tab,paste0("/well/nichols/users/qcv214/bnn2/smooth/age_tab.csv"), row.names = FALSE)
+```
+
+#24Feb
+Load result of smooth data `pca_lm_usc_smooth.R`
+```{r}
+for(k in c(90)){
+  pca_lm<-matrix(,nrow=50,ncol=14)
+  failed_run<-c()
+  for(i in setdiff(1:50,failed_run)){
+        pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_usc",k,"_",i,".csv")))
+  }
+  #bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+  pca_lm.m<-apply(pca_lm, c(2), median)
+  
+    #plot
+    boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3]))))
+    # abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+    # abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+    
+    # boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+    # # abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+    # # abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+    # pca_lm.m[14]
+    
+  # pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_pred_usc",k,"_",4,".csv")))
+  # #in-sample
+  # plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+  # abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+  # abline(a=0,b=1,lwd=2,col="red")
+  # grid(nx = NULL, ny = NULL,
+  #      lty = 2,      # Grid line type
+  #      col = "gray", # Grid line color
+  #      lwd = 2)      # Grid line width
+  # #out-sample
+  # plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+  # abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+  # abline(a=0,b=1,lwd=2,col="red")
+  # grid(nx = NULL, ny = NULL,
+  #      lty = 2,      # Grid line type
+  #      col = "gray", # Grid line color
+  #      lwd = 2)      # Grid line width
+}
+# plot(histogram(pca_lm.pred[1,]))
+# plot(histogram(pca_lm.pred[2,]))
+```
+Load result of smooth data `pca_lm_hs_usc_smooth.R`
+```{r}
+for(k in c(90)){
+  pca_lm<-matrix(,nrow=50,ncol=14)
+  pca_hs<-matrix(,nrow=50,ncol=14)
+  failed_run<-c()
+  for(i in setdiff(1:50,failed_run)){
+        temp <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_pred_hs_usc",k,"_",i,".csv")))
+        pca_lm[i,] <- temp[1,]
+        pca_hs[i,] <- temp[2,]
+  }
+  #bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+  pca_lm.m<-apply(pca_lm, c(2), median)
+  pca_hs.m<-apply(pca_hs, c(2), median)
+    #plot
+    boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3]))))
+    boxplot(pca_hs[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_hs[,3]),max(c(pca_hs[,3]))))
+    pca_lm.m[14]
+    pca_hs.m[14]
+    
+    
+  pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_pred_hs_usc",k,"_",4,".csv")))
+  #in-sample
+  plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+  abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+  abline(a=0,b=1,lwd=2,col="red")
+  grid(nx = NULL, ny = NULL,
+       lty = 2,      # Grid line type
+       col = "gray", # Grid line color
+       lwd = 2)      # Grid line width
+  #out-sample
+  plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+  abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+  abline(a=0,b=1,lwd=2,col="red")
+  grid(nx = NULL, ny = NULL,
+       lty = 2,      # Grid line type
+       col = "gray", # Grid line color
+       lwd = 2)      # Grid line width
+  
+  #HS in-sample
+  plot(pca_lm.pred[1,],pca_lm.pred[5,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+  abline(lm(pca_lm.pred[5,] ~ pca_lm.pred[1,]),col="blue")
+  abline(a=0,b=1,lwd=2,col="red")
+  grid(nx = NULL, ny = NULL,
+       lty = 2,      # Grid line type
+       col = "gray", # Grid line color
+       lwd = 2)      # Grid line width
+  #out-sample
+  plot(pca_lm.pred[2,],pca_lm.pred[6,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+  abline(lm(pca_lm.pred[6,] ~ pca_lm.pred[2,]),col="blue")
+  abline(a=0,b=1,lwd=2,col="red")
+  grid(nx = NULL, ny = NULL,
+       lty = 2,      # Grid line type
+       col = "gray", # Grid line color
+       lwd = 2)      # Grid line width
+}
+plot(histogram(pca_lm.pred[1,]))
+plot(histogram(pca_lm.pred[2,]))
+```
+
+```{r}
+  pca_lm<-matrix(,nrow=50,ncol=14)
+  pca_hs<-matrix(,nrow=50,ncol=14)
+  failed_run<-c()
+  for(i in setdiff(1:50,failed_run)){
+        temp <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_hs_usc",90,"_",i,".csv")))
+        pca_lm[i,] <- temp[1,]
+        pca_hs[i,] <- temp[2,]
+  }
+  pca_lm.m<-apply(pca_lm, c(2), median)
+  pca_hs.m<-apply(pca_hs, c(2), median)
+    #plot
+    boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3]))))
+    boxplot(pca_hs[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_hs[,3]),max(c(pca_hs[,3]))))
+    pca_lm.m[14]
+    pca_hs.m[14]
+```
+```{r}
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_pred_hs_usc",90,"_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample (lm)" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "out-of-sample (lm)" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[5,], xlab = "True age", ylab = "predictions", main = "in-sample (horseshoe)" )
+abline(lm(pca_lm.pred[5,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[6,], xlab = "True age", ylab = "predictions", main = "out-of-sample (horseshoe)" )
+abline(lm(pca_lm.pred[6,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+
+plot(pca_lm.pred[3,],pca_lm.pred[5,])
+abline(lm(pca_lm.pred[5,] ~ pca_lm.pred[3,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+```
+
+
+
+
+
+
+
+
+
+#24 Feb
+Load new gs.opt
+
+```{r}
+  deg_vec<- c(10,20,30,40)
+  a_vec  <- c(0.001,0.1,1)
+  b_vec  <- c(0.1,1,5,10,20,40,60,80,100)
+  param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+  gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs23feb_ROI_",i,".csv")))
+}
+table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])
+table(param_grid[gs.opt[,1],3])
+```
+
+Load result 24 feb gs
+```{r}
+bsvcnn.24feb<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.24feb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/bsvcnn24feb_gs_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.24feb.m<-apply(bsvcnn.24feb, c(2,3), median)
+plot.box(bsvcnn.24feb)
+bsvcnn.24feb.m[1,3]
+```
+
+```{r}
+plot.box(bsvcnn.24feb)
+```
+
+
+#25 Feb
+Load new gs.opt 23 feb
+
+```{r}
+  deg_vec<- c(10,20,30,40)
+  a_vec  <- c(0.001,0.1,1)
+  b_vec  <- c(0.1,1,5,10,20,40,60,80,100)
+  param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+  gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs23feb_ROI_",i,".csv")))
+}
+table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])
+table(param_grid[gs.opt[,1],3])
+```
+
+#27 Feb
+Load new gs.opt 25 feb
+
+```{r}
+  deg_vec<- c(30,40)
+  a_vec  <- c(0.001,0.1,0.5,1,2,3)
+  b_vec  <- c(1,5,10,20,40,60,80,100,120,140)
+  param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+  gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs25feb_ROI_",i,".csv")))
+}
+table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])
+table(param_grid[gs.opt[,1],3])
+```
+
+```{r}
+bsvcnn.25feb<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      bsvcnn.25feb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/bsvcnn25feb_gs_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+bsvcnn.25feb.m<-apply(bsvcnn.25feb, c(2,3), median)
+plot.box(bsvcnn.25feb)
+bsvcnn.25feb.m[1,3]
+```
+Plot gp
+```{r}
+mask.com<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+mask.reg <- sort(setdiff(unique(c(mask.com)),c(0)))
+
+deg_vec<- c(30,40)
+a_vec  <- c(0.001,0.1,0.5,1,2,3)
+b_vec  <- c(1,5,10,20,40,60,80,100,120,140)
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs25feb_ROI_",i,".csv")))
+}
+#sum(gs.opt[,1]==gs.opt[,2]) = 110 
+#plot result of `gs_plot_gp.R`
+mask.com.temp<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bsvcnn/pile/HO-combined-fin.nii.gz')
+for(i in mask.reg){
+  poly_degree = param_grid[gs.opt[which(i==(mask.reg))],1]
+  a_concentration= param_grid[gs.opt[which(i==(mask.reg))],2]
+  b_smoothness= param_grid[gs.opt[which(i==(mask.reg))],3]
+  mask.temp <- oro.nifti::readNIfTI(paste0("/well/nichols/users/qcv214/bnn2/pile/gs_fin_mask_ROI_",i,"_gp_",poly_degree,a_concentration,b_smoothness)) 
+  mask.com.temp[mask.com.temp == i] <- mask.temp[mask.temp != 0]
+  #print(i)
+}
+mask.com.temp@datatype = 16
+mask.com.temp@bitpix = 32
+writeNIfTI(mask.com.temp,'/well/nichols/users/qcv214/bnn2/viz/full_gs_gp')
+```
+
+
+#1 March
+## Whole brain
+I have accidentally discovered that not scaling coords might be better for whole brain with a random rsq up to 60%
+
+Get best param for re-scaled:
+```{r}
+deg_vec<- c(30,40)
+a_vec  <- c(0.001,0.1,0.5,1,2,3)
+b_vec  <- c(1,5,10,20,40,60,80,100,120,140)
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+param.grid.part<-split(1:nrow(param_grid),1:nrow(param_grid)%%100)
+
+rsq.vec <- vector(mode="numeric")
+failed_run <- c(102,104,106,108,110,112,114,116,118,120)
+for(i in setdiff(1:nrow(param_grid),failed_run)){
+  # as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs_wb_",i,".csv")))[3]
+  rsq.vec <- c(rsq.vec,as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/gs_wb_rescaled_",i,".csv")))[3]) 
+}
+#Note that this index will not correspond after 102
+which.max(rsq.vec)
+param_grid[96,] #Best combination
+```
+```{r}
+boxplot(rsq.vec)
+```
+
+Get whole brain
+```{r}
+bsvcnn.1mar.wb<-array(,dim=c(50,3,14))
+poly_degree = 40
+a_concentration=3
+b_smoothness=100
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+
+      bsvcnn.1mar.wb[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/whole_brain",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+#bsvcnn.1mar.wb.m.m<-bsvcnn.1mar.wb.m[-failed_run,]
+bsvcnn.1mar.wb.m<-apply(bsvcnn.1mar.wb, c(2,3), median)
+```
+```{r}
+plot.box(bsvcnn.1mar.wb)
+```
+
+plot back
+
+## pca+lm
+```{r}
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_pred_test",90,"_",4,".csv")))
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample (lm)" )
+abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "out-of-sample (lm)" )
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#in-sample
+plot(pca_lm.pred[1,],pca_lm.pred[5,], xlab = "True age", ylab = "predictions", main = "in-sample (horseshoe)" )
+abline(lm(pca_lm.pred[5,] ~ pca_lm.pred[1,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+#out-sample
+plot(pca_lm.pred[2,],pca_lm.pred[6,], xlab = "True age", ylab = "predictions", main = "out-of-sample (horseshoe)" )
+abline(lm(pca_lm.pred[6,] ~ pca_lm.pred[2,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+
+plot(pca_lm.pred[3,],pca_lm.pred[5,])
+abline(lm(pca_lm.pred[5,] ~ pca_lm.pred[3,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+
+plot(pca_lm.pred[3,],pca_lm.pred[4,])
+abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[3,]),col="blue")
+abline(a=0,b=1,lwd=2,col="red")
+```
+```{r}
+  pca_lm<-matrix(,nrow=50,ncol=14)
+  failed_run<-c()
+  for(i in setdiff(1:50,failed_run)){
+        temp <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/smooth/pca_lm_test",90,"_",4,".csv")))
+        pca_lm[i,] <- temp[2,]
+  }
+  pca_lm.m<-apply(pca_lm, c(2), median)
+    #plot
+    boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3]))))
+    pca_lm.m[14]
+```
+
+#8 mar
+Test lm function using iris dataset
+```{r}
+mod1 <- lm(iris$Sepal.Length ~ iris$Sepal.Width)
+predict(mod1)
+predict(mod1,new_data = data.frame(c(1,2,3)))
+cbind(1,c(1,2,3))%*%coefficients(mod1)
+
+predict(mod1,new_data = iris$Sepal.Width[1:3])
+```
+
+
+
