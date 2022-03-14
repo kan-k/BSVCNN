@@ -94,28 +94,28 @@ x.test.scaled <- sweep(x.test.centred,2,x.train.sd,"/")
 print("PCA")
 pca.train <-prcomp(x.train.scaled,center = FALSE, scale = FALSE)
 pca.train.sum <- summary(pca.train)
-#num.sel.pc <- which(pca.train.sum$importance[3,]>0.90)[1]
-#num.sel.pc <- which(pca.train.sum$importance[3,]>0.50)[1] #CHANGED here at 1.43pm on 15 Feb to assess overfitting of 90%
-num.sel.pc <- which(pca.train.sum$importance[3,]>0.25)[1]
-pca.train.sc <- pca.train$x[,1:num.sel.pc]
 
-pca.test.sc <- x.test.scaled %*% as.matrix(pca.train$rotation)
-pca.test.sc <- pca.test.sc[,1:num.sel.pc]
+for(k in c(90,50)){
+  # num.sel.pc <- which(pca.train.sum$importance[3,]>0.90)[1]
+  # num.sel.pc <- which(pca.train.sum$importance[3,]>0.50)[1] #CHANGED here at 1.43pm on 15 Feb to assess overfitting of 90%
+  # num.sel.pc <- which(pca.train.sum$importance[3,]>0.25)[1]
+  num.sel.pc <- which(pca.train.sum$importance[3,]> k*0.01)[1]
+  pca.train.sc <- pca.train$x[,1:num.sel.pc]
+  
+  pca.test.sc <- x.test.scaled %*% as.matrix(pca.train$rotation)
+  pca.test.sc <- pca.test.sc[,1:num.sel.pc]
+  
+  print("=====")
+  print("==========")
+  print("fit model")
+  
+  lassofit <- lm(age_tab$age[ind.to.use$train] ~ as.matrix(pca.train.sc))
+  print("in-predict")
+  pred_prior<-predict(lassofit)
+  print("out-predict")
+  pred_prior_new<-t(as.matrix(cbind(1,pca.test.sc))%*%coefficients(lassofit))
+  write.csv(rbind(age_tab$age[ind.to.use$train],age_tab$age[ind.to.use$test],pred_prior,pred_prior_new), paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_",k,"_",JobId,".csv"), row.names = FALSE)
+  write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(coefficients(lassofit)[-1]))),sum(abs(coefficients(lassofit)[-1])>1e-5),num.sel.pc),
+            paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_",k,"_",JobId,".csv"), row.names = FALSE)
 
-print("=====")
-print("==========")
-print("fit model")
-
-lassofit <- lm(age_tab$age[ind.to.use$train] ~ as.matrix(pca.train.sc))
-print("in-predict")
-pred_prior<-predict(lassofit)
-print("out-predict")
-pred_prior_new<-predict(lassofit, as.data.frame(pca.test.sc))
-write.csv(rbind(age_tab$age[ind.to.use$train],age_tab$age[ind.to.use$test],pred_prior,pred_prior_new), paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred25_",JobId,".csv"), row.names = FALSE)
-write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(coefficients(lassofit)[-1]))),sum(abs(coefficients(lassofit)[-1])>1e-5),num.sel.pc),
-          paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm25_",JobId,".csv"), row.names = FALSE)
-
-
-
-
-
+}

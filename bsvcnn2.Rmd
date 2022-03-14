@@ -370,7 +370,7 @@ Load 90% unscaled PCA
 pca_lm<-matrix(,nrow=50,ncol=14)
 failed_run<-c()
 for(i in setdiff(1:50,failed_run)){
-      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_usc90_",i,".csv")))
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_usc90_",i,".csv"))) 
 }
 #bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
 pca_lm.m<-apply(pca_lm, c(2), median)
@@ -385,7 +385,7 @@ pca_lm.m<-apply(pca_lm, c(2), median)
   abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
   pca_lm.m[14]
   
-pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc90_",4,".csv")))
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc290_",4,".csv"))) #2 from typo
 #in-sample
 plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
 abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
@@ -424,7 +424,7 @@ pca_lm.m<-apply(pca_lm, c(2), median)
   abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
   pca_lm.m[14]
   
-pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc50_",4,".csv")))
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc250_",4,".csv"))) #2 from typo
 #in-sample
 plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
 abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
@@ -434,7 +434,7 @@ grid(nx = NULL, ny = NULL,
      col = "gray", # Grid line color
      lwd = 2)      # Grid line width
 #out-sample
-plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "out-of-sample" )
 abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
 abline(a=0,b=1,lwd=2,col="red")
 grid(nx = NULL, ny = NULL,
@@ -443,7 +443,7 @@ grid(nx = NULL, ny = NULL,
      lwd = 2)      # Grid line width
 ```
 
-25%
+25% insignificant since 50% already uses 1PC
 ```{r}
 pca_lm<-matrix(,nrow=50,ncol=14)
 failed_run<-c()
@@ -463,7 +463,7 @@ pca_lm.m<-apply(pca_lm, c(2), median)
   abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
   pca_lm.m[14]
   
-pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc25_",4,".csv")))
+pca_lm.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_pred_usc225_",4,".csv"))) #2 from typo
 #in-sample
 plot(pca_lm.pred[1,],pca_lm.pred[3,], xlab = "True age", ylab = "predictions", main = "in-sample" )
 abline(lm(pca_lm.pred[3,] ~ pca_lm.pred[1,]),col="blue")
@@ -473,13 +473,36 @@ grid(nx = NULL, ny = NULL,
      col = "gray", # Grid line color
      lwd = 2)      # Grid line width
 #out-sample
-plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "in-sample" )
+plot(pca_lm.pred[2,],pca_lm.pred[4,], xlab = "True age", ylab = "predictions", main = "out-of-sample" )
 abline(lm(pca_lm.pred[4,] ~ pca_lm.pred[2,]),col="blue")
 abline(a=0,b=1,lwd=2,col="red")
 grid(nx = NULL, ny = NULL,
      lty = 2,      # Grid line type
      col = "gray", # Grid line color
      lwd = 2)      # Grid line width
+```
+
+14 March, scaled data to compare
+```{r}
+for(k in c(90,50)){
+pca_lm<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      pca_lm[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/pca_lm_",k,"_",i,".csv")))
+}
+#bsvcnn.11feb.def<-bsvcnn.11feb.def[-failed_run,,]
+pca_lm.m<-apply(pca_lm, c(2), median)
+
+  #plot
+  boxplot(pca_lm[,3], ylab = expression(R^2), xlab = "method", main = "R^2 ",ylim=c(min(pca_lm[,3]),max(c(pca_lm[,3],fin.out.hs.m[3]))))
+  abline(h=fin.out.hs.m[3], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[3], lwd = 2,col = 'blue', lty = 2)
+  
+  boxplot(pca_lm[,6], ylab = "RMSE", xlab = "method", main = "RMSE ",ylim=c(min(c(pca_lm[,6],fin.out.hs.m[6])),max(c(pca_lm[,6],fin.out.hs.m[6]))))
+  abline(h=fin.out.hs.m[6], lwd = 2,col = 'red', lty = 2)
+  abline(h=fin.out.mfvb.m[6], lwd = 2,col = 'blue', lty = 2)
+  print(pca_lm.m[14])
+}
 ```
 
 Check distribution of training and testing age
