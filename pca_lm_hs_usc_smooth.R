@@ -94,7 +94,8 @@ pca.train.sum <- summary(pca.train)
   print("out-predict")
   colnames(pca.test.sc) <- NULL
   print(colnames(pca.test.sc))
-  pred_prior_new<-predict(lassofit, as.matrix(pca.test.sc))
+  # pred_prior_new<-predict(lassofit, as.matrix(pca.test.sc))
+  pred_prior_new<-(as.matrix(cbind(1,pca.test.sc))%*%coefficients(lassofit))
   
   res_lm <- c(unlist(t(as.matrix(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(coefficients(lassofit)[-1]))),sum(abs(coefficients(lassofit)[-1])>1e-5),num.sel.pc)
   print(length(res_lm))
@@ -106,12 +107,12 @@ pca.train.sum <- summary(pca.train)
   res_hs <- c(unlist(t(as.matrix(rsqcal2(pred_prior2,pred_prior_new2,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit2$post_mean$betacoef[-1,]))),sum(abs(lassofit2$post_mean$betacoef[-1,])>1e-5),num.sel.pc)
   print(length(res_hs))
   
-  print(length(age_tab$age[ind.to.use$train]))
-  print(length(age_tab$age[ind.to.use$test]))
-  print(length(pred_prior))
-  print(length(pred_prior_new))
-  print(length(pred_prior2))
-  print(length(pred_prior_new2))
+  # print(length(age_tab$age[ind.to.use$train]))
+  # print(length(age_tab$age[ind.to.use$test]))
+  # print(length(pred_prior))
+  # print(length(pred_prior_new))
+  # print(length(pred_prior2))
+  # print(length(pred_prior_new2))
   all_pred <- rbind(t(as.matrix(age_tab$age[ind.to.use$train])),t(as.matrix(age_tab$age[ind.to.use$test])),
                       t(as.matrix(pred_prior)),t(as.matrix(pred_prior_new)),
                         t(as.matrix(pred_prior2)),t(as.matrix(pred_prior_new2)))
