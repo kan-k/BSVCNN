@@ -72,7 +72,7 @@ batch_size <- 500
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
 #NN parameters
-learning_rate <-10^-(JobId)
+learning_rate <-10^-(1)*JobId
 epoch <- 30
 print("Initialisation")
 #1 Initialisation
@@ -128,14 +128,15 @@ for(e in 1:epoch){
     #OR
     #This should be in the same dim as `theta.matrix`, so for updating w_ij, we require beta_fit_j *relu.prime(i)*input(i) then take avaerge over batch
     grad <- array(,dim = c(batch_size,dim(theta.matrix)))
-      for(j in 1:nrow(theta.matrix)){
-        grad[,j,] <- c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
-      }
+    for(j in 1:nrow(theta.matrix)){
+      grad[,j,] <- c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
+    }
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
     
     #Update theta matrix
-    theta.matrix <- theta.matrix*(1-learning_rate*0.9/batch_size) - learning_rate*grad.m #Here iI set the L2 penalty to be 0.9, it should be dependent on prior variance of theta
+    #I changed -grad.m to +grad.m
+    theta.matrix <- theta.matrix*(1-learning_rate*0.9/batch_size) + learning_rate*grad.m #Here iI set the L2 penalty to be 0.9, it should be dependent on prior variance of theta
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update weight
@@ -154,5 +155,6 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - start.time
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn3_loss_",learning_rate,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn3_weights_',learning_rate,'.feather'))
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn4_loss_",learning_rate,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn4_weights_',learning_rate,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn4_theta_',learning_rate,'.feather'))
