@@ -1,5 +1,5 @@
 # R script
-#Change for loop for each batch update to matrix (Hadamard) update
+#Adam with regularisation https://arxiv.org/abs/1711.05101
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
 p_load(PMS)
@@ -39,12 +39,7 @@ mse <- function(pred, true){mean((pred-true)^2)}
 loss.train <- vector(mode = "numeric")
 loss.val <- vector(mode = "numeric")
 
-#Hyperparameter
-  #Define prior variance of theta
-  prior_var <- 0.9 #Note that right now I am using prior_var as my coefficient for L2 regularisation but actually it should be something proportional to it but not it 
-#NN parameters
-  learning_rate <-10^-(1)*JobId
-  epoch <- 10
+
 
 print("Loading data")
 
@@ -78,6 +73,29 @@ cat("Loading data complete in: ", time.taken)
 batch_size <- 500
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
+#NN parameters
+learning_rate <-10^-(JobId)
+epoch <- 40
+
+
+#Hyperparameter
+#Define prior variance of theta
+prior_var <- 0.9
+#NN parameters
+learning_rate <-10^-(1)*JobId
+epoch <- 10
+
+#Adam 
+#hyperparameter
+beta1 <- 0.95
+beta2 <- 0.95
+eps <- 1e-8
+#initialisation
+m <- matrix(0,nrow=n.mask, ncol= n.expan )
+v <- matrix(0,nrow=n.mask, ncol= n.expan )
+
+
+
 
 print("Initialisation")
 #1 Initialisation
@@ -89,6 +107,7 @@ weights <- matrix(, ncol = p.dat, nrow = n.mask)
 for(i in res3.mask.reg){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
+num.it <-1
 
 #Start epoch
 for(e in 1:epoch){
@@ -107,7 +126,7 @@ for(e in 1:epoch){
     hidden.layer <- matrix(,nrow=batch_size,ncol = n.mask)
     for(i in 1:n.mask){
       temp.mul <- (res3.dat[mini.batch$train[[b]], ]  %*% weights[i,]) #Will yield a batch_size x 1 
-      #Activate by ReLU and save to hidden layer1
+      #Activate by ReLU and save to hidden layer
       hidden.layer[,i] <- relu(temp.mul) #will yield a vector, not matrix
     }
     #Hidden layer
@@ -138,21 +157,23 @@ for(e in 1:epoch){
     #OR
     #This should be in the same dim as `theta.matrix`, so for updating w_ij, we require beta_fit_j *relu.prime(i)*input(i) then take avaerge over batch
     grad <- array(,dim = c(batch_size,dim(theta.matrix)))
-    hessian <- array(,dim = c(batch_size,dim(theta.matrix)))
     for(j in 1:nrow(theta.matrix)){
-      act.prime.temp <- c(relu.prime(hidden.layer[,j]))
-      z.temp <- res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,]
-      grad[,j,] <- -c(grad.loss)*beta_fit$HS[j]*act.prime.temp *z.temp
-      hessian[,j,] <- (beta_fit$HS[j]*act.prime.temp *z.temp + prior_var)^2
+      grad[,j,] <- -c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
     }
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
-    hessian.m <- apply(hessian, c(2,3), mean)
-    newton.lr <- 1/hessian.m
+    # Full gradient with regularisation
+    grad.full <- grad.m + 1/(2*prior_var)*theta.matrix
+    
+    #ADAM param updates
+    m <- beta1*m + (1-beta1)*grad.full
+    v <- beta2*v + (1-beta2)*grad.full^2
+    
+    m.hat <- m/(1-beta1^num.it)
+    v.hat <- m/(1-beta2^num.it)
     
     #Update theta matrix
-    #I changed -grad.m to +grad.m
-    theta.matrix <- theta.matrix*(1-newton.lr*prior_var/batch_size) - newton.lr*grad.m #Here iI set the L2 penalty to be prior_var, it should be dependent on prior variance of theta
+    theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps)
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update weight
@@ -160,7 +181,7 @@ for(e in 1:epoch){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
     
-    
+    num.it <- num.it+1
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[mini.batch$test])))
   }
@@ -171,6 +192,6 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - start.time
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_nm1_loss_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_nm1_weights_jobid_',JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_nm1_theta_jobid_',JobId,'.feather'))
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_loss_",learning_rate,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_weights_',learning_rate,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_theta_',learning_rate,'.feather'))
