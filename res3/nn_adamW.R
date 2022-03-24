@@ -170,7 +170,7 @@ for(e in 1:epoch){
     v <- beta2*v + (1-beta2)*grad.full^2
     
     m.hat <- m/(1-beta1^num.it)
-    v.hat <- m/(1-beta2^num.it)
+    v.hat <- v/(1-beta2^num.it)
     
     #Update theta matrix
     theta.matrix <- theta.matrix - learning_rate* (m.hat/(sqrt(v.hat)+eps) + 1/(2*prior_var*batch_size)*theta.matrix)

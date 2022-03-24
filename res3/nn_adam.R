@@ -58,6 +58,7 @@ n.expan <- choose(10+3,3)
 p.dat <- ncol(res3.dat)
 n.dat <- nrow(res3.dat)
 #GP
+
 partial.gp <- array(, dim = c(length(res3.mask.reg),p.dat,n.expan))
 for(i in res3.mask.reg){
   partial.gp[i,,] <- t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_",i,"_fixed_100.540.feather"))))
@@ -66,16 +67,13 @@ partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214
 
 print("Getting mini batch")
 
-time.taken <- Sys.time() - start.time
+time.taken <- Sys.time() - start.time #On RStudio the whole loading up thing takes less than 2 minutes
 cat("Loading data complete in: ", time.taken)
 
 #Get minibatch index 
 batch_size <- 500
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
-#NN parameters
-learning_rate <-10^-(JobId)
-epoch <- 40
 
 
 #Hyperparameter
@@ -83,7 +81,7 @@ epoch <- 40
 prior_var <- 0.9
 #NN parameters
 learning_rate <-10^-(1)*JobId
-epoch <- 10
+epoch <- 40
 
 #Adam 
 #hyperparameter
@@ -166,12 +164,18 @@ for(e in 1:epoch){
     grad.full <- grad.m + 1/(2*prior_var)*theta.matrix
     
     #ADAM param updates
+    print(paste0("mt-1 #NA: ",sum(is.na(c(m)))))
+    print(paste0("vt-1 #NA: ",sum(is.na(c(v)))))
     m <- beta1*m + (1-beta1)*grad.full
     v <- beta2*v + (1-beta2)*grad.full^2
     
-    m.hat <- m/(1-beta1^num.it)
-    v.hat <- m/(1-beta2^num.it)
+    print(paste0("mt #NA: ",sum(is.na(c(m)))))
+    print(paste0("vt #NA: ",sum(is.na(c(v)))))
     
+    m.hat <- m/(1-beta1^num.it)
+    v.hat <- v/(1-beta2^num.it)
+    print(paste0("mhat t #NA: ",sum(is.na(c(m.hat)))))
+    print(paste0("vhat t #NA: ",sum(is.na(c(v.hat)))))
     #Update theta matrix
     theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps)
     #Note that updating weights at the end will be missing the last batch of last epoch
@@ -195,3 +199,5 @@ cat("Training complete in: ", time.taken)
 write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_loss_",learning_rate,".csv"), row.names = FALSE)
 write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_weights_',learning_rate,'.feather'))
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_theta_',learning_rate,'.feather'))
+
+
