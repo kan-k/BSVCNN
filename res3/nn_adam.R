@@ -71,7 +71,7 @@ time.taken <- Sys.time() - start.time #On RStudio the whole loading up thing tak
 cat("Loading data complete in: ", time.taken)
 
 #Get minibatch index 
-batch_size <- 500
+batch_size <- 500 #previous 100 batch_size and 50 epochs
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
 
@@ -80,8 +80,8 @@ num.batch <- length(mini.batch$train)
 #Define prior variance of theta
 prior_var <- 0.9
 #NN parameters
-learning_rate <-10^-(1)*JobId
-epoch <- 40
+learning_rate <-10^-1*(JobId)
+epoch <- 20
 
 #Adam 
 #hyperparameter
@@ -164,18 +164,18 @@ for(e in 1:epoch){
     grad.full <- grad.m + 1/(2*prior_var)*theta.matrix
     
     #ADAM param updates
-    print(paste0("mt-1 #NA: ",sum(is.na(c(m)))))
-    print(paste0("vt-1 #NA: ",sum(is.na(c(v)))))
+    # print(paste0("mt-1 #NA: ",sum(is.na(c(m)))))
+    # print(paste0("vt-1 #NA: ",sum(is.na(c(v)))))
     m <- beta1*m + (1-beta1)*grad.full
     v <- beta2*v + (1-beta2)*grad.full^2
     
-    print(paste0("mt #NA: ",sum(is.na(c(m)))))
-    print(paste0("vt #NA: ",sum(is.na(c(v)))))
+    # print(paste0("mt #NA: ",sum(is.na(c(m)))))
+    # print(paste0("vt #NA: ",sum(is.na(c(v)))))
     
     m.hat <- m/(1-beta1^num.it)
     v.hat <- v/(1-beta2^num.it)
-    print(paste0("mhat t #NA: ",sum(is.na(c(m.hat)))))
-    print(paste0("vhat t #NA: ",sum(is.na(c(v.hat)))))
+    # print(paste0("mhat t #NA: ",sum(is.na(c(m.hat)))))
+    # print(paste0("vhat t #NA: ",sum(is.na(c(v.hat)))))
     #Update theta matrix
     theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps)
     #Note that updating weights at the end will be missing the last batch of last epoch
@@ -196,8 +196,8 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - start.time
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_loss_",learning_rate,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_weights_',learning_rate,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam1_theta_',learning_rate,'.feather'))
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam2_loss_",learning_rate,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam2_weights_',learning_rate,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam2_theta_',learning_rate,'.feather'))
 
 

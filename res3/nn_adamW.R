@@ -70,20 +70,17 @@ time.taken <- Sys.time() - start.time
 cat("Loading data complete in: ", time.taken)
 
 #Get minibatch index 
-batch_size <- 500
+batch_size <- 500 #previous 100 batch_size and 50 epochs
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
-#NN parameters
-learning_rate <-10^-(JobId)
-epoch <- 40
 
 
 #Hyperparameter
 #Define prior variance of theta
 prior_var <- 0.9
 #NN parameters
-learning_rate <-10^-(1)*JobId
-epoch <- 10
+learning_rate <-10^-1*(JobId)
+epoch <- 20
 
 #Adam 
 #hyperparameter
@@ -192,6 +189,6 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - start.time
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW1_loss_",learning_rate,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW1_weights_',learning_rate,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW1_theta_',learning_rate,'.feather'))
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_loss_",learning_rate,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_weights_',learning_rate,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_theta_',learning_rate,'.feather'))
