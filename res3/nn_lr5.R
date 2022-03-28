@@ -85,6 +85,8 @@ for(i in res3.mask.reg){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
 
+time.train <-  Sys.time()
+
 #Start epoch
 for(e in 1:epoch){
   
@@ -157,7 +159,7 @@ for(e in 1:epoch){
   print(paste0("epoch: ",e," out of ",epoch, ", time taken for this epoch: ",Sys.time() -time.epoch))
 }
 
-time.taken <- Sys.time() - start.time
+time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
 write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn5_loss_",learning_rate,".csv"), row.names = FALSE)
