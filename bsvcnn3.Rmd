@@ -768,4 +768,74 @@ lines(full.res[2,4,],type=line.type,col = 6,lwd=2)
 legend('bottomright',legend = c('method',"SGD","Adam", "AdamW","WB_Reg"),lty=c(1,1,2,3,1), pch = c(1,1,2,3,20),col=c("white",1,3,4,6))
 ```
 
+Tom's meeting 28 March
+
+1. deffo fix bias for each regression
+2. Look into the scattered mask
+3.Investigate loading time
+Maybe
+4. Try to mimic the neural nets to look similar to whole brain GP
+
+Investigating mask
+`CICatlas_Res3_trunc.txt ` says everything above label 12 is not GM, then threshold at 0.1, so 
+```{r}
+temp.img <-oro.nifti::readNIfTI('/well/nichols/users/kfh142/data/Atlas/CIC/MultRes/CICatlas_Res3_2mm.nii.gz')
+#Take only grey matter
+temp.img[temp.img>12] <- 0
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,paste0('/well/nichols/users/qcv214/bnn2/res3/maskfix/res3mask_1'))
+#Load data with new unthreshold mask
+part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
+part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1:(dim(part_use)[1]),1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz')
+res3.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/maskfix/res3mask_1') 
+#threshold at 0.1
+dat_colmeans<-colMeans(res3.dat)
+#Originally I had temp.img > 1, that means it's not thresholded by 
+# temp.img[temp.img>1][dat_colmeans<0.1] <- 0 
+# temp.img@datatype = 2
+# temp.img@bitpix = 8
+# writeNIfTI(temp.img,'/well/nichols/users/qcv214/bnn2/res3/maskfix/res3mask_2')
+
+#
+temp.img[temp.img>0][dat_colmeans<0.1] <- 0 
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,'/well/nichols/users/qcv214/bnn2/res3/maskfix/res3mask_3') #Correct
+writeNIfTI(temp.img,'/well/nichols/users/qcv214/bnn2/res3/res3mask')
+
+#Load data again using the new thresholded mask
+res3.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask') # 4263 x 156812
+#save datat
+write_feather(as.data.frame(res3.dat), '/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather')
+#reload data and mask
+res3.dat <- read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather') #dim = 4263 156812
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask.reg <- setdiff(sort(unique(c(res3.mask))),0)
+```
+Create `rearranged data`
+```{r}
+#dat.temp <- matrix(nrow = nrow(res3.dat),ncol = sum(res3.mask>0))
+dat.temp <- matrix(nrow = nrow(res3.dat),ncol = 1)
+  cum.length <- 0
+for(i in res3.mask.reg){
+  roi.reg<- read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/dat_ROI_",i,'.feather'))
+  print(dim(roi.reg))
+  cum.length <- cum.length + ncol(roi.reg)
+  print(cum.length)
+  roi.reg<- as.matrix(roi.reg)
+  dat.temp <- cbind(dat.temp, roi.reg)
+}
+colnames(dat.temp) <- NULL
+dat.temp <- as.data.frame(dat.temp[,-1])
+dat.temp <- as.matrix(dat.temp)
+write_feather(as.data.frame(dat.temp), '/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather')
+```
+
+
+
+
+
 
