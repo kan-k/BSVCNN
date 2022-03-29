@@ -1,5 +1,5 @@
 # R script
-#Adam with regularisation & decoupled weight decay https://arxiv.org/abs/1711.05101
+#Adam with regularisation https://arxiv.org/abs/1711.05101
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
 p_load(PMS)
@@ -58,6 +58,7 @@ n.expan <- choose(10+3,3)
 p.dat <- ncol(res3.dat)
 n.dat <- nrow(res3.dat)
 #GP
+
 partial.gp <- array(, dim = c(length(res3.mask.reg),p.dat,n.expan))
 for(i in res3.mask.reg){
   partial.gp[i,,] <- t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_",i,"_fixed_100.540.feather"))))
@@ -66,7 +67,7 @@ partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214
 
 print("Getting mini batch")
 
-time.taken <- Sys.time() - start.time
+time.taken <- Sys.time() - start.time #On RStudio the whole loading up thing takes less than 2 minutes
 cat("Loading data complete in: ", time.taken)
 
 #Get minibatch index 
@@ -78,10 +79,9 @@ num.batch <- length(mini.batch$train)
 #Hyperparameter
 #Define prior variance of theta
 prior_var <- 0.9
-C2 <- 1/(2*prior_var)
 #NN parameters
-learning_rate <-10^-1*(JobId)
-epoch <- 30
+learning_rate <-0.1
+epoch <- 20
 
 #Adam 
 #hyperparameter
@@ -108,6 +108,7 @@ for(i in res3.mask.reg){
 num.it <-1
 
 time.train <-  Sys.time()
+
 #Start epoch
 for(e in 1:epoch){
   
@@ -162,17 +163,23 @@ for(e in 1:epoch){
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
     # Full gradient with regularisation
-    grad.full <- grad.m + C2*theta.matrix
+    grad.full <- grad.m + 1/(2*prior_var)*theta.matrix
     
     #ADAM param updates
+    # print(paste0("mt-1 #NA: ",sum(is.na(c(m)))))
+    # print(paste0("vt-1 #NA: ",sum(is.na(c(v)))))
     m <- beta1*m + (1-beta1)*grad.full
     v <- beta2*v + (1-beta2)*grad.full^2
     
+    # print(paste0("mt #NA: ",sum(is.na(c(m)))))
+    # print(paste0("vt #NA: ",sum(is.na(c(v)))))
+    
     m.hat <- m/(1-beta1^num.it)
     v.hat <- v/(1-beta2^num.it)
-    
+    # print(paste0("mhat t #NA: ",sum(is.na(c(m.hat)))))
+    # print(paste0("vhat t #NA: ",sum(is.na(c(v.hat)))))
     #Update theta matrix
-    theta.matrix <- theta.matrix - learning_rate* (m.hat/(sqrt(v.hat)+eps) + C2/batch_size)*theta.matrix)
+    theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps)
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update weight
@@ -191,6 +198,6 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_loss_",learning_rate,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_weights_',learning_rate,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_theta_',learning_rate,'.feather'))
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam3_loss_",learning_rate,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam3_weights_',learning_rate,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam3_theta_',learning_rate,'.feather'))

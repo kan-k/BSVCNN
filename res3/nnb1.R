@@ -1,5 +1,5 @@
 # R script
-#Adam with regularisation & decoupled weight decay https://arxiv.org/abs/1711.05101
+#Change for loop for each batch update to matrix (Hadamard) update
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
 p_load(PMS)
@@ -39,8 +39,6 @@ mse <- function(pred, true){mean((pred-true)^2)}
 loss.train <- vector(mode = "numeric")
 loss.val <- vector(mode = "numeric")
 
-
-
 print("Loading data")
 
 #Load data and mask and GP 
@@ -70,29 +68,15 @@ time.taken <- Sys.time() - start.time
 cat("Loading data complete in: ", time.taken)
 
 #Get minibatch index 
-batch_size <- 500 #previous 100 batch_size and 50 epochs
+batch_size <- 500
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
-
-
-#Hyperparameter
+#NN parameters
+learning_rate <-10^-(1)*JobId
+epoch <- 20
 #Define prior variance of theta
 prior_var <- 0.9
 C2 <- 1/(2*prior_var)
-#NN parameters
-learning_rate <-10^-1*(JobId)
-epoch <- 30
-
-#Adam 
-#hyperparameter
-beta1 <- 0.95
-beta2 <- 0.95
-eps <- 1e-8
-#initialisation
-m <- matrix(0,nrow=n.mask, ncol= n.expan )
-v <- matrix(0,nrow=n.mask, ncol= n.expan )
-
-
 
 
 print("Initialisation")
@@ -100,14 +84,18 @@ print("Initialisation")
 #1.1 Initialise the partial weights around normal dist as a matrix of size (nrow(bases..ie choose...) x number of neurons in 2nd layer ie#regions)
 theta.matrix <- matrix(rnorm(n.mask*n.expan,0,prior_var),nrow=n.mask, ncol= n.expan) #Initialise with Norm(0,0.9)
 #1.2 Multiply the partial weights to partial GP and use it as the actual weights of size (p x 1)
-#Initialising
+#Initialising weights
 weights <- matrix(, ncol = p.dat, nrow = n.mask)
 for(i in res3.mask.reg){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
-num.it <-1
-
+#Initialising bias (to 0)
+bias <- rep(0,n.mask)
+  
+  
+  
 time.train <-  Sys.time()
+
 #Start epoch
 for(e in 1:epoch){
   
@@ -124,7 +112,7 @@ for(e in 1:epoch){
     
     hidden.layer <- matrix(,nrow=batch_size,ncol = n.mask)
     for(i in 1:n.mask){
-      temp.mul <- (res3.dat[mini.batch$train[[b]], ]  %*% weights[i,]) #Will yield a batch_size x 1 
+      temp.mul <- (res3.dat[mini.batch$train[[b]], ]  %*% weights[i,]) + bias[i] #Will yield a batch_size x 1 + bias of that region
       #Activate by ReLU and save to hidden layer
       hidden.layer[,i] <- relu(temp.mul) #will yield a vector, not matrix
     }
@@ -140,13 +128,17 @@ for(e in 1:epoch){
     #Layers
     hidden.layer.test <- matrix(,nrow=2000,ncol = n.mask)
     for(i in 1:n.mask){
-      temp.mul.test <- (res3.dat[mini.batch$test, ]  %*% weights[i,]) #Will yield a batch_size x 1 
+      temp.mul.test <- (res3.dat[mini.batch$test, ]  %*% weights[i,]) + bias[i] #Will yield a batch_size x 1 + bias of that region
       #Activate by ReLU and save to hidden layer
       hidden.layer.test[,i] <- relu(temp.mul.test)
     }
     #Loss calculation
     hs_pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer.test %*%beta_fit$HS
     loss.val <- c(loss.val, mse(hs_pred_SOI,age[mini.batch$test]))
+    
+    
+    
+  #Update weight
     
     #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
     grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
@@ -155,32 +147,38 @@ for(e in 1:epoch){
     # 1/500x1/500x1/
     #OR
     #This should be in the same dim as `theta.matrix`, so for updating w_ij, we require beta_fit_j *relu.prime(i)*input(i) then take avaerge over batch
+  
+  #Update weight
     grad <- array(,dim = c(batch_size,dim(theta.matrix)))
-    for(j in 1:nrow(theta.matrix)){
+    for(j in 1:nrow(theta.matrix)){ #nrow of theta.matrix = n.mask
       grad[,j,] <- -c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
     }
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
-    # Full gradient with regularisation
-    grad.full <- grad.m + C2*theta.matrix
+  
+  #Update bias
+    grad.b <- array(,dim = c(batch_size,dim(theta.matrix))) matrix(, nrow= batch_size,ncol=n.mask)
+    for(j in 1:n.mask){
+      grad.b[,j] <- -c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))
+    }
+    #Take batch average
+    grad.b.m <- c(apply(grad.b, c(2), mean))
     
-    #ADAM param updates
-    m <- beta1*m + (1-beta1)*grad.full
-    v <- beta2*v + (1-beta2)*grad.full^2
-    
-    m.hat <- m/(1-beta1^num.it)
-    v.hat <- v/(1-beta2^num.it)
     
     #Update theta matrix
-    theta.matrix <- theta.matrix - learning_rate* (m.hat/(sqrt(v.hat)+eps) + C2/batch_size)*theta.matrix)
+    #I changed -grad.m to +grad.m
+    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m
     #Note that updating weights at the end will be missing the last batch of last epoch
+    
+    #Update bias
+    bias <- bias - learning_rate*c(grad.b.m)
     
     #Update weight
     for(i in res3.mask.reg){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
     
-    num.it <- num.it+1
+    
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[mini.batch$test])))
   }
@@ -191,6 +189,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_loss_",learning_rate,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_weights_',learning_rate,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_theta_',learning_rate,'.feather'))
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_loss_",learning_rate,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_weights_',learning_rate,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_theta_',learning_rate,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_bias_',learning_rate,".csv"), row.names = FALSE)

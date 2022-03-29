@@ -79,6 +79,7 @@ num.batch <- length(mini.batch$train)
 #Hyperparameter
 #Define prior variance of theta
 prior_var <- 0.9
+C2 <- 1/(2*prior_var)
 #NN parameters
 learning_rate <-10^-1*(JobId)
 epoch <- 30
@@ -163,7 +164,7 @@ for(e in 1:epoch){
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
     # Full gradient with regularisation
-    grad.full <- grad.m + 1/(2*prior_var)*theta.matrix
+    grad.full <- grad.m + C2*theta.matrix
     
     #ADAM param updates
     # print(paste0("mt-1 #NA: ",sum(is.na(c(m)))))
