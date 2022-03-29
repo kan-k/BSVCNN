@@ -553,13 +553,13 @@ for(i in 1:12){
 Load data from `nn_adam.R`
 ```{r}
 num.batch <- 4
-epoch <- 20
+epoch <- 30
 
-failed_run <- c(4,6,9)
+failed_run <- c(1,4,5,6,7)
 lr_vec <- c(10^(-1)*setdiff((1:9),failed_run)) #Note that 1 is not lr = 1, but lr = 1e-4
 res.nn.loss <- array(, dim = c(2,9,num.batch*epoch )) 
 for( i in lr_vec){
-  # print(i)
+   print(i)
   res.nn.loss[,which(i==lr_vec),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam2_loss_",i,".csv")))
 }
 res.nn.loss <- res.nn.loss[, 1:length(lr_vec),] #set range
@@ -570,8 +570,8 @@ line.type <- 'l'
 plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))),lwd=2,
      main = "Training RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
-lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 3,lwd=2)
-lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
 # lines(sqrt(res.nn.loss[1,7,]),type=line.type,col = 12,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,3,5)])), pch = 1,col=c("white",1,3,10))
@@ -580,19 +580,19 @@ legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,3,5)])), 
 plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))),lwd=2,
      main = "Out-of-sample RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
-lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 3,lwd=2)
-lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
 # lines(sqrt(res.nn.loss[2,7,]),type=line.type,col = 12,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 
-legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,3,5)])), pch = 1,col=c("white",1,3,10))
+legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2,3)])), pch = 1,col=c("white",1,3,10))
 ```
 Get theta
 ```{r}
 num.batch <- 4
-epoch <- 20
+epoch <- 30
 #Get the best performance
-w.1e10 <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam2_theta_",0.1,".feather")))
+w.1e10 <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adam2_theta_",0.2,".feather")))
 plot(density(w.1e10[7,]))
 # lines(density(w.1e10[2,]))
 # lines(density(w.1e10[3,]))
@@ -608,13 +608,13 @@ for(i in 1:12){
 Load data from `nn_adamW.R`
 ```{r}
 num.batch <- 4
-epoch <- 20
+epoch <- 30
 
-failed_run <- c(1,2,8)
+failed_run <- c(3,5,7,8,9)
 lr_vec <- c(10^(-1)*setdiff((1:9),failed_run)) #Note that 1 is not lr = 1, but lr = 1e-4
 res.nn.loss <- array(, dim = c(2,9,num.batch*epoch )) 
 for( i in lr_vec){
-  # print(i)
+   print(i)
   res.nn.loss[,which(i==lr_vec),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_loss_",i,".csv")))
 }
 res.nn.loss <- res.nn.loss[, 1:length(lr_vec),] #set range
@@ -624,8 +624,8 @@ line.type <- 'l'
 plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))),lwd=2,
      main = "Training RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
-lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 3,lwd=2)
-lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 10,lwd=2)
 # lines(sqrt(res.nn.loss[1,7,]),type=line.type,col = 12,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,3,5)])), pch = 1,col=c("white",1,3,10))
@@ -634,19 +634,19 @@ legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,3,5)])), 
 plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))),lwd=2,
      main = "Out-of-sample RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
-lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 3,lwd=2)
-lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 10,lwd=2)
 # lines(sqrt(res.nn.loss[2,7,]),type=line.type,col = 12,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 
-legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,3,5)])), pch = 1,col=c("white",1,3,10))
+legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2,4)])), pch = 1,col=c("white",1,3,10))
 ```
 Get theta
 ```{r}
 num.batch <- 4
-epoch <- 20
+epoch <- 30
 #Get the best performance
-w.1e10 <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_theta_",0.3,".feather")))
+w.1e10 <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_adamW2_theta_",0.1,".feather")))
 plot(density(w.1e10[4,]))
 # lines(density(w.1e10[2,]))
 # lines(density(w.1e10[3,]))
