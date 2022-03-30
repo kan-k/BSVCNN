@@ -1072,7 +1072,7 @@ plot(w.1e10)
 ```
 
 ##SGD
-Load data from `nn_adamW_b1.R`
+Load data from `nnb1.R`
 Not working great
 ```{r}
 num.batch <- 4
@@ -1165,7 +1165,7 @@ This is for re-arranged data
 ```{r}
 num.batch <- 4
 epoch <- 10
-failed_run <- c(1:4)
+failed_run <- c(1,3,4)
 res.nn.loss.t1 <- array(, dim = c(2,5,num.batch*epoch )) 
 for( i in setdiff(1:5,failed_run)){
   res.nn.loss.t1[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/test_re-arranged_nnb1_loss_0.7_jobid_",i,".csv")))
@@ -1178,7 +1178,7 @@ plot(sqrt(res.nn.loss.t1[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss.t1
      ,lwd=2,
      main = "Training RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
-# lines(sqrt(res.nn.loss.t1[1,2,]),type=line.type,col = 3,lwd=2)
+ lines(sqrt(res.nn.loss.t1[1,2,]),type=line.type,col = 3,lwd=2)
 # lines(sqrt(res.nn.loss.t1[1,3,]),type=line.type,col = 10,lwd=2)
 # lines(sqrt(res.nn.loss.t1[1,7,]),type=line.type,col = 12,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
@@ -1188,7 +1188,7 @@ abline(v=4*1:epoch,lwd=0.2)
 plot(sqrt(res.nn.loss.t1[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss.t1[2,,])), max(sqrt(res.nn.loss.t1[2,,]))),lwd=2,
      main = "Out-of-sample RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
-# lines(sqrt(res.nn.loss.t1[2,2,]),type=line.type,col = 3,lwd=2)
+ lines(sqrt(res.nn.loss.t1[2,2,]),type=line.type,col = 3,lwd=2)
 #  lines(sqrt(res.nn.loss.t1[2,3,]),type=line.type,col = 10,lwd=2)
 # lines(sqrt(res.nn.loss.t1[2,7,]),type=line.type,col = 12,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
@@ -1202,12 +1202,12 @@ This is for raw data
 num.batch <- 4
 epoch <- 10
 
-failed_run <- c(2,3)
+failed_run <- c()
 res.nn.loss.t2 <- array(, dim = c(2,5,num.batch*epoch )) 
 for( i in setdiff(1:5,failed_run)){
   res.nn.loss.t2[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/test_raw_nnb1_loss_0.7_jobid_",i+5,".csv")))
 }
- res.nn.loss.t2 <- res.nn.loss.t2[,-failed_run,] #set range
+ # res.nn.loss.t2 <- res.nn.loss.t2[,-failed_run,] #set range
 ```
 ```{r}
 line.type <- 'l'
@@ -1216,7 +1216,8 @@ plot(sqrt(res.nn.loss.t2[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss.t2
      ylab = "Batch RMSE",xlab= "Iteration")
 lines(sqrt(res.nn.loss.t2[1,2,]),type=line.type,col = 3,lwd=2)
 lines(sqrt(res.nn.loss.t2[1,3,]),type=line.type,col = 10,lwd=2)
-# lines(sqrt(res.nn.loss.t2[1,7,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss.t2[1,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss.t2[1,5,]),type=line.type,col = 14,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 # legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",12))
 
@@ -1226,8 +1227,136 @@ plot(sqrt(res.nn.loss.t2[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss.t2
      ylab = "Batch RMSE",xlab= "Iteration")
 lines(sqrt(res.nn.loss.t2[2,2,]),type=line.type,col = 3,lwd=2)
  lines(sqrt(res.nn.loss.t2[2,3,]),type=line.type,col = 10,lwd=2)
-# lines(sqrt(res.nn.loss.t2[2,7,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss.t2[2,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss.t2[2,5,]),type=line.type,col = 14,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 
 # legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
 ```
+
+
+
+
+#31 Mar
+After fixing data
+
+##SGD
+Load data from `nnb2.R`
+```{r}
+learning_rate <- 0.6
+num.batch <- 4
+epoch <- 40
+
+failed_run <- c()
+res.nn.loss <- array(, dim = c(2,10,num.batch*epoch )) 
+for( i in setdiff(1:10,failed_run)){
+  res.nn.loss[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb2_loss_",learning_rate,"_jobid_",i,".csv")))
+}
+ # res.nn.loss <- res.nn.loss[,-failed_run,] #set range
+```
+```{r}
+line.type <- 'l'
+plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
+abline(v=4*1:epoch,lwd=0.2)
+# legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",12))
+
+#out-of-sample
+plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))),lwd=2,
+     main = "Out-of-sample RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
+ lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
+abline(v=4*1:epoch,lwd=0.2)
+
+# legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
+```
+
+##Adam
+Load data from `nn_adamb2.R`
+```{r}
+learning_rate <- 0.1
+num.batch <- 4
+epoch <- 40
+
+failed_run <- c()
+res.nn.loss <- array(, dim = c(2,10,num.batch*epoch )) 
+for( i in setdiff(1:10,failed_run)){
+  res.nn.loss[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam2_loss_",learning_rate,"_jobid_",i,".csv")))
+}
+ # res.nn.loss <- res.nn.loss[,-failed_run,] #set range
+```
+```{r}
+line.type <- 'l'
+plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
+abline(v=4*1:epoch,lwd=0.2)
+# legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",12))
+
+#out-of-sample
+plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))),lwd=2,
+     main = "Out-of-sample RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
+ lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
+abline(v=4*1:epoch,lwd=0.2)
+
+# legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
+```
+
+##SGD
+Load data from `nnb2.R`
+```{r}
+learning_rate <- 0.1
+num.batch <- 4
+epoch <- 40
+
+failed_run <- c()
+res.nn.loss <- array(, dim = c(2,10,num.batch*epoch )) 
+for( i in setdiff(1:10,failed_run)){
+  res.nn.loss[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW2_loss_",learning_rate,"_jobid_",i,".csv")))
+}
+ # res.nn.loss <- res.nn.loss[,-failed_run,] #set range
+```
+```{r}
+line.type <- 'l'
+plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])), max(sqrt(res.nn.loss[1,,]))),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
+lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
+abline(v=4*1:epoch,lwd=0.2)
+# legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",12))
+
+#out-of-sample
+plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])), max(sqrt(res.nn.loss[2,,]))),lwd=2,
+     main = "Out-of-sample RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
+ lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
+lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
+lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
+abline(v=4*1:epoch,lwd=0.2)
+
+# legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
+```
+
+
+
+
