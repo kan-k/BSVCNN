@@ -65,11 +65,11 @@ for(i in res3.mask.reg){
 }
 partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
 
-print("Getting mini batch")
+
 
 time.taken <- Sys.time() - start.time #On RStudio the whole loading up thing takes less than 2 minutes
 cat("Loading data complete in: ", time.taken)
-
+print("Getting mini batch")
 #Get minibatch index 
 batch_size <- 500 #previous 100 batch_size and 50 epochs
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
@@ -82,12 +82,12 @@ prior_var <- 0.9
 C2 <- 1/(2*prior_var)
 #NN parameters
 learning_rate <-10^-1*(JobId)
-epoch <- 20
+epoch <- 10
 
 #Adam 
 #hyperparameter
-beta1 <- 0.95
-beta2 <- 0.95
+beta1 <- 0.9
+beta2 <- 0.999
 eps <- 1e-8
 #initialisation
 m <- matrix(0,nrow=n.mask, ncol= n.expan )
@@ -185,7 +185,7 @@ for(e in 1:epoch){
     # print(paste0("mhat t #NA: ",sum(is.na(c(m.hat)))))
     # print(paste0("vhat t #NA: ",sum(is.na(c(v.hat)))))
     #Update theta matrix
-    theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps) + C2/batch_size)*theta.matrix)
+    theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps) + C2/batch_size*theta.matrix
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update bias
@@ -225,6 +225,6 @@ cat("Training complete in: ", time.taken)
 write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW1_loss_",learning_rate,".csv"), row.names = FALSE)
 write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW1_weights_',learning_rate,'.feather'))
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW1_theta_',learning_rate,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW1_theta_',learning_rate,".csv"), row.names = FALSE)
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW1_bias_',learning_rate,".csv"), row.names = FALSE)
 
 

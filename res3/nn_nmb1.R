@@ -177,7 +177,7 @@ for(e in 1:epoch){
     grad.b.m <- c(apply(grad.b , c(2), mean))
     hessian.b.m <- c(apply(hessian.b , c(2), mean))
     newton.b.lr <- 1/hessian.b.m
-    bias <- bias - newton.b.lr*grad.b.m
+    bias <- c(bias - newton.b.lr*grad.b.m)
     
     
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))

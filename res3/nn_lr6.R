@@ -165,5 +165,3 @@ cat("Training complete in: ", time.taken)
 write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn6_loss_",learning_rate,".csv"), row.names = FALSE)
 write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn6_weights_',learning_rate,'.feather'))
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn6_theta_',learning_rate,'.feather'))
-
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nn6_theta_',learning_rate,'.feather'))

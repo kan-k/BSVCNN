@@ -65,11 +65,11 @@ for(i in res3.mask.reg){
 }
 partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
 
-print("Getting mini batch")
+
 
 time.taken <- Sys.time() - start.time #On RStudio the whole loading up thing takes less than 2 minutes
 cat("Loading data complete in: ", time.taken)
-
+print("Getting mini batch")
 #Get minibatch index 
 batch_size <- 500 #previous 100 batch_size and 50 epochs
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
@@ -86,8 +86,8 @@ epoch <- 20
 
 #Adam 
 #hyperparameter
-beta1 <- 0.95
-beta2 <- 0.95
+beta1 <- 0.9
+beta2 <- 0.999
 eps <- 1e-8
 #initialisation
 m <- matrix(0,nrow=n.mask, ncol= n.expan )
@@ -156,7 +156,6 @@ for(e in 1:epoch){
     
     #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
     grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
-    #grad <- mean.grad.loss* beta_fit$HS * relu.prime() *res3.dat[mini.batch$train[[1]], ]
     # 1/500x1/500x1/
     #OR
     #This should be in the same dim as `theta.matrix`, so for updating w_ij, we require beta_fit_j *relu.prime(i)*input(i) then take avaerge over batch
@@ -167,23 +166,17 @@ for(e in 1:epoch){
       grad[,j,] <- -c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
     }
     #Take batch average
-    grad.m <- apply(grad, c(2,3), mean)
+    grad.m <- apply(grad, c(2,3), mean) #Each row correspond to each region, hence the the row is the vector gradient
     # Full gradient with regularisation
     grad.full <- grad.m + C2*theta.matrix
     
     #ADAM param updates
-    # print(paste0("mt-1 #NA: ",sum(is.na(c(m)))))
-    # print(paste0("vt-1 #NA: ",sum(is.na(c(v)))))
     m <- beta1*m + (1-beta1)*grad.full
     v <- beta2*v + (1-beta2)*grad.full^2
     
-    # print(paste0("mt #NA: ",sum(is.na(c(m)))))
-    # print(paste0("vt #NA: ",sum(is.na(c(v)))))
-    
     m.hat <- m/(1-beta1^num.it)
     v.hat <- v/(1-beta2^num.it)
-    # print(paste0("mhat t #NA: ",sum(is.na(c(m.hat)))))
-    # print(paste0("vhat t #NA: ",sum(is.na(c(v.hat)))))
+    
     #Update theta matrix
     theta.matrix <- theta.matrix - learning_rate*m.hat/(sqrt(v.hat)+eps)
     #Note that updating weights at the end will be missing the last batch of last epoch
@@ -225,7 +218,7 @@ cat("Training complete in: ", time.taken)
 write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam1_loss_",learning_rate,".csv"), row.names = FALSE)
 write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam1_weights_',learning_rate,'.feather'))
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam1_theta_',learning_rate,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam1_theta_',learning_rate,".csv"), row.names = FALSE)
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam1_bias_',learning_rate,".csv"), row.names = FALSE)
 
 
 

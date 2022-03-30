@@ -13,6 +13,17 @@ p_load(truncnorm)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
+if(JobId <= 5){
+  res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather'))
+  method <- "re-arranged"
+  print(method)
+}else{
+  res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather'))
+  method <- "raw"
+  print(method)
+}
+
+
 start.time <- Sys.time()
 #1 Split data into mini batches (train and validation)
 get_ind_split <- function(num_datpoint, num_test,num_train, batch_size){
@@ -46,7 +57,7 @@ print("Loading data")
 res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(res3.mask)),0))
 #data
-res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather'))
+# res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather'))
 #Age
 age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
 age <- age_tab$age
@@ -72,7 +83,7 @@ batch_size <- 500
 mini.batch <- get_ind_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000,batch_size = batch_size)
 num.batch <- length(mini.batch$train)
 #NN parameters
-learning_rate <-10^-(1)*JobId
+learning_rate <-0.7
 epoch <- 10
 #Define prior variance of theta
 prior_var <- 0.9
@@ -91,9 +102,9 @@ for(i in res3.mask.reg){
 }
 #Initialising bias (to 0)
 bias <- rep(0,n.mask)
-  
-  
-  
+
+
+
 time.train <-  Sys.time()
 
 #Start epoch
@@ -138,7 +149,7 @@ for(e in 1:epoch){
     
     
     
-  #Update weight
+    #Update weight
     
     #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
     grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
@@ -146,16 +157,16 @@ for(e in 1:epoch){
     # 1/500x1/500x1/
     #OR
     #This should be in the same dim as `theta.matrix`, so for updating w_ij, we require beta_fit_j *relu.prime(i)*input(i) then take avaerge over batch
-  
-  #Update weight
+    
+    #Update weight
     grad <- array(,dim = c(batch_size,dim(theta.matrix)))
     for(j in 1:nrow(theta.matrix)){ #nrow of theta.matrix = n.mask
       grad[,j,] <- -c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
     }
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
-  
-  #Update bias
+    
+    #Update bias
     grad.b <- matrix(,nrow = batch_size,ncol = n.mask)
     for(j in 1:n.mask){
       grad.b[,j] <- -c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))
@@ -187,7 +198,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_loss_",learning_rate,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_weights_',learning_rate,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_theta_',learning_rate,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnb1_bias_',learning_rate,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/test_",method,"_nnb1_loss_",learning_rate,"_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/test_',method,'_nnb1_weights_',learning_rate,"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/test_',method,'_nnb1_theta_',learning_rate,"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/test_',method,'_nnb1_bias_',learning_rate,"_jobid_",JobId,".csv"), row.names = FALSE)
