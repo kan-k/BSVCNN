@@ -1241,18 +1241,18 @@ abline(v=4*1:epoch,lwd=0.2)
 After fixing data
 
 ##SGD
-Load data from `nnb2.R`
+Load data from `nnb2.R` run 4 is the best
 ```{r}
 learning_rate <- 0.6
 num.batch <- 4
 epoch <- 40
 
-failed_run <- c()
+failed_run <- c(2,3,5,6,7,8,9)
 res.nn.loss <- array(, dim = c(2,10,num.batch*epoch )) 
 for( i in setdiff(1:10,failed_run)){
   res.nn.loss[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb2_loss_",learning_rate,"_jobid_",i,".csv")))
 }
- # res.nn.loss <- res.nn.loss[,-failed_run,] #set range
+res.nn.loss <- res.nn.loss[,-failed_run,] #set range
 ```
 ```{r}
 line.type <- 'l'
@@ -1261,8 +1261,8 @@ plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])
      ylab = "Batch RMSE",xlab= "Iteration")
 lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
 lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
-lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
-lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
+# lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
+# lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 # legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",12))
 
@@ -1272,26 +1272,26 @@ plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])
      ylab = "Batch RMSE",xlab= "Iteration")
 lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
  lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
-lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
-lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
+# lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
+# lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 
 # legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
 ```
 
 ##Adam
-Load data from `nn_adamb2.R`
+Load data from `nn_adamb2.R` run 4 
 ```{r}
 learning_rate <- 0.1
 num.batch <- 4
 epoch <- 40
 
-failed_run <- c()
+failed_run <- c(2,3,5,6,8)
 res.nn.loss <- array(, dim = c(2,10,num.batch*epoch )) 
 for( i in setdiff(1:10,failed_run)){
   res.nn.loss[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam2_loss_",learning_rate,"_jobid_",i,".csv")))
 }
- # res.nn.loss <- res.nn.loss[,-failed_run,] #set range
+res.nn.loss <- res.nn.loss[,-failed_run,] #set range
 ```
 ```{r}
 line.type <- 'l'
@@ -1318,19 +1318,19 @@ abline(v=4*1:epoch,lwd=0.2)
 # legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
 ```
 
-##SGD
-Load data from `nnb2.R`
+##AdamW
+Load data from `nn_adamWb2.R` run 10
 ```{r}
 learning_rate <- 0.1
 num.batch <- 4
 epoch <- 40
 
-failed_run <- c()
+failed_run <- c(1,2,3,4,5,6,8,9)
 res.nn.loss <- array(, dim = c(2,10,num.batch*epoch )) 
 for( i in setdiff(1:10,failed_run)){
   res.nn.loss[,i,] <-as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW2_loss_",learning_rate,"_jobid_",i,".csv")))
 }
- # res.nn.loss <- res.nn.loss[,-failed_run,] #set range
+res.nn.loss <- res.nn.loss[,-failed_run,] #set range
 ```
 ```{r}
 line.type <- 'l'
@@ -1338,9 +1338,9 @@ plot(sqrt(res.nn.loss[1,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[1,,])
      main = "Training RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
 lines(sqrt(res.nn.loss[1,2,]),type=line.type,col = 3,lwd=2)
-lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
-lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
-lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
+# lines(sqrt(res.nn.loss[1,3,]),type=line.type,col = 10,lwd=2)
+# lines(sqrt(res.nn.loss[1,4,]),type=line.type,col = 12,lwd=2)
+# lines(sqrt(res.nn.loss[1,5,]),type=line.type,col = 14,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 # legend('bottomleft',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",12))
 
@@ -1349,13 +1349,80 @@ plot(sqrt(res.nn.loss[2,1,]),type=line.type, ylim = c(min(sqrt(res.nn.loss[2,,])
      main = "Out-of-sample RMSE",
      ylab = "Batch RMSE",xlab= "Iteration")
 lines(sqrt(res.nn.loss[2,2,]),type=line.type,col = 3,lwd=2)
- lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
-lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
-lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
+#  lines(sqrt(res.nn.loss[2,3,]),type=line.type,col = 10,lwd=2)
+# lines(sqrt(res.nn.loss[2,4,]),type=line.type,col = 12,lwd=2)
+# lines(sqrt(res.nn.loss[2,5,]),type=line.type,col = 14,lwd=2)
 abline(v=4*1:epoch,lwd=0.2)
 
 # legend('topright',legend = c('learning_rate',as.character(lr_vec[c(1,2)])), pch = 1,col=c("white",1,2))
 ```
+
+##Combining all results
+```{r}
+#SGD
+res.nn.loss.sgd <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb2_loss_",0.6,"_jobid_",4,".csv")))
+#Adam
+res.nn.loss.adam <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adam2_loss_",0.1,"_jobid_",4,".csv")))
+#Adam with decoupled weight decay
+res.nn.loss.adamw <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb_adamW2_loss_",0.1,"_jobid_",10,".csv")))
+```
+###Load whole brain
+```{r}
+poly_degree = 10
+a_concentration = 0.5
+b_smoothness = 40
+wb_23mar<-array(,dim=c(50,3,14))
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      wb_23mar[i,,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/whole_brain",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+wb_23mar.m<-apply(wb_23mar, c(2,3), median)
+```
+##Fit horseshoe directly for benchmark
+```{r}
+hs_31mar<-array(,dim=c(50,13))
+failed_run<-c(16,22,39)
+for(i in setdiff(1:50,failed_run)){
+      hs_31mar[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/hs_noscale_",i,".csv"))))
+}
+hs_31mar <- hs_31mar[-failed_run,]
+hs_31mar.m<-apply(hs_31mar, c(2), median)
+
+```
+```{r}
+min.it <- min(ncol(res.nn.loss.sgd),ncol(res.nn.loss.adam),ncol(res.nn.loss.adamw))
+full.res.out <- rbind(sqrt(res.nn.loss.sgd[2,1:min.it]), sqrt(res.nn.loss.adam[2,1:min.it]), sqrt(res.nn.loss.adamw[2,1:min.it]),wb_23mar.m[1,6],hs_31mar.m[6])
+full.res.in <- rbind(sqrt(res.nn.loss.sgd[1,1:min.it]), sqrt(res.nn.loss.adam[1,1:min.it]), sqrt(res.nn.loss.adamw[1,1:min.it]),wb_23mar.m[1,5],hs_31mar.m[5])
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,], type = "o", lty = 2,pch=2,col = 3,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 3,pch=3,col = 4,lwd=2)
+lines(full.res[1,4,],type=line.type,col = 6,lwd=2)
+lines(full.res[1,5,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c('method',"SGD","Adam", "AdamW","GP_reg","Horseshoe"),lty=c(1,1,2,3,1,1), pch = c(1,1,2,3,20,20),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,], type = "o", lty = 2,pch=2,col = 3,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 3,pch=3,col = 4,lwd=2)
+lines(full.res[2,4,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,5,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('topright',legend = c('method',"SGD","Adam", "AdamW","GP_reg","Horseshoe"),lty=c(1,1,2,3,1,1), pch = c(1,1,2,3,20,20),col=c("white",1,3,4,6,2))
+```
+
 
 
 
