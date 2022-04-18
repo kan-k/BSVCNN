@@ -20,7 +20,6 @@ part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.t
 part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
 part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
 # 
-part_1<-oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
 img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
 norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 nb.full <- find_brain_image_neighbors(img1, mask_subcor, radius=1)
