@@ -1694,8 +1694,406 @@ lines(theta.sd.mat[3,], type = "o", lty = 3,pch=3,col = 4)
 abline(h=0.1,lty=2,col='grey')
 abline(h=0.5,lty=2,col='grey')
 abline(h=0.9,lty=2,col='grey')
-legend('right',legend = c(expression(tau)ß≈,"0.1","0.5", "0.9"),lty=c(1,1,2,3), pch = c(1,1,2,3),col=c("white",1,3,4))
+legend('right',legend = c(expression(tau),"0.1","0.5", "0.9"),lty=c(1,1,2,3), pch = c(1,1,2,3),col=c("white",1,3,4))
+```
+
+#7 april
+
+Load result from `privar_tune4.R`
+only 13 and 15 (is good) worked
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb5_loss_",0.6,"_seed_",6,"_jobid_",15,".csv")))
+
+
+full.res.out <- rbind( sqrt(res.nn.loss.sgd.1[2,]) ,wb_23mar.m[1,6],hs_31mar.m[6])
+full.res.in <- rbind(sqrt(res.nn.loss.sgd.1[1,]),wb_23mar.m[1,5],hs_31mar.m[5])
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+# lines(full.res[1,2,], type = "o", lty = 2,pch=2,col = 3,lwd=2)
+# lines(full.res[1,3,], type = "o", lty = 3,pch=3,col = 4,lwd=2)
+# lines(full.res[1,4,], type = "o", lty = 3,pch=3,col = 5,lwd=2)
+lines(full.res[1,2,],type=line.type,col = 6,lwd=2)
+lines(full.res[1,3,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c(expression(tau),"0.1","0.5", "0.9","GP_reg","Horseshoe"),lty=c(1,1,2,3,1,1), pch = c(1,1,2,3,20,20),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+# lines(full.res[2,2,], type = "o", lty = 2,pch=2,col = 3,lwd=2)
+# lines(full.res[2,3,], type = "o", lty = 3,pch=3,col = 4,lwd=2)
+# lines(full.res[2,4,], type = "o", lty = 3,pch=3,col = 5,lwd=2)
+lines(full.res[2,2,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,3,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('topright',legend = c(expression(tau),"0.1","0.5", "0.9","GP_reg","Horseshoe"),lty=c(1,1,2,3,1,1), pch = c(1,1,2,3,20,20),col=c("white",1,3,4,6,2))
 ```
 
 
+Load grid search
+```{r}
+  deg_vec<- c(10)
+  a_vec  <- c(0.001,0.01,0.1,0.5,1,2,3)
+  b_vec  <- 40
+  param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+  gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/gs5april_ROI_",i,".csv")))
+}
+# table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])
+# table(param_grid[gs.opt[,1],3])
+```
+
+
+#11 April
+Load data from `privar_tune5.R`
+First two sec unusable
+25 vs 35
+45, 55
+65
+75, 85 (starting to go up)
+##Load with seed 16
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",25,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",35,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",45,".csv"))) #this is the best
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",55,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",65,".csv")))
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",75,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",85,".csv")))
+
+full.res.out <- rbind( sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]), sqrt(res.nn.loss.sgd.3[2,]), sqrt(res.nn.loss.sgd.4[2,]), sqrt(res.nn.loss.sgd.5[2,]), sqrt(res.nn.loss.sgd.6[2,]), sqrt(res.nn.loss.sgd.7[2,])
+                       ,wb_23mar.m[1,6],hs_31mar.m[6])
+full.res.in <- rbind(sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]), sqrt(res.nn.loss.sgd.3[1,]) , sqrt(res.nn.loss.sgd.4[1,]), sqrt(res.nn.loss.sgd.5[1,]), sqrt(res.nn.loss.sgd.6[1,]), sqrt(res.nn.loss.sgd.7[1,])
+                     ,wb_23mar.m[1,5],hs_31mar.m[5])
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+prior.var.vec <- c(0.0001,0.0005,0.001,0.01,0.1,0.5,1,5,10)
+line.type <- 'l'
+plot(full.res[1,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,3,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 4,pch=4,col = 5,lwd=1)
+lines(full.res[1,5,], type = "o", lty = 5,pch=5,col = 6,lwd=1)
+lines(full.res[1,6,], type = "o", lty = 6,pch=6,col = 7,lwd=1)
+lines(full.res[1,7,], type = "o", lty = 7,pch=7,col = 8,lwd=1)
+lines(full.res[1,8,],type=line.type,col = 6,lwd=2)
+lines(full.res[1,9,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c(expression(tau^2),as.character(prior.var.vec[-c(1:2)])),lty=c(1,c(1:7)), pch = c(1,c(1:7)),col=c("white",1,3:8))
+
+#out-of-sample
+plot(full.res[2,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,], type = "o", lty = 2,pch=2,col = 3,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 3,pch=3,col = 4,lwd=2)
+lines(full.res[2,4,], type = "o", lty = 4,pch=4,col = 5,lwd=1)
+lines(full.res[2,5,], type = "o", lty = 5,pch=5,col = 6,lwd=1)
+lines(full.res[2,6,], type = "o", lty = 6,pch=6,col = 7,lwd=1)
+lines(full.res[2,7,], type = "o", lty = 7,pch=7,col = 8,lwd=1)
+lines(full.res[2,8,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,9,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c(expression(tau^2),as.character(prior.var.vec[-c(1:2)])),lty=c(1,c(1:7)), pch = c(1,c(1:7)),col=c("white",1,3:8))
+```
+lr = 0.1 (or 0.5) seems the best 
+Look at the theta dist
+```{r}
+ theta.sd.mat <- matrix(,ncol=12,nrow = 2)
+ counter <- 1
+ for(i in c(45,55)){
+   theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_theta_",0.6,"_jobid_",i,".feather")))
+   theta.sd.mat[counter,] <- apply(theta.sgd, 1, var)
+   counter <- counter+1
+ }
+# theta.sd.mat
+```
+```{r}
+ plot(theta.sd.mat[1,], ylim = c(0,1.1), type = "o", lty = 1,pch=1, ylab="var", main = "Region-wise var after 160 iterations", xlab='Region number')
+ lines(theta.sd.mat[2,], type = "o", lty = 2,pch=2,col = 3)
+ abline(h=0.1,lty=2,col='grey')
+ abline(h=0.5,lty=2,col='grey')
+ legend('topright',legend = c(expression(tau^2),"0.1","0.5"),lty=c(1,1,2), pch = c(1,1,2),col=c("white",1,3))
+```
+Finally we have something in agreement with variance update
+
+
+##Load result of gp reg
+from `region_gp1`
+```{r}
+reg_gp<-matrix(,nrow=50,ncol=14)
+failed_run<-c()
+for(i in setdiff(1:50,failed_run)){
+      reg_gp[i,] <- c(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/pile/region_gp_11apr_",i,".csv"))))
+}
+reg_gp.m<-apply(reg_gp, c(2), median)
+#plot
+reg_gp.m[6]
+```
+
+Assess theta dist for each region? I'd have to solve a system of lin equations
+
+
+#Load result of seed 16
+```{r}
+reg_gp16 <- c(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/region_gp_11apr_seed16_",1,".csv"))))
+reg_gp16[6]
+wb_23mar[16,1,6]
+```
+Look at the theta distribution by solving system of lin equations... can't actually use solve though, solve requires a square matrix.... otherwise not invertible... or need to compute the left inverse 
+Moore-penrose generalised inverse `ginv()` from `MASS`
+```{r}
+library(MASS)
+```
+Load the fitted horseshoe coef
+```{r}
+reg_gp16_fitted<- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/region_gp_11apr_coef_seed16_",1,'.feather')))
+```
+
+```{r}
+norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
+
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask.reg <- sort(setdiff(unique(c(res3.mask)),0))
+dimension = 3
+deg_vec<- c(10)
+a_vec  <- c(0.001,0.01,0.1,0.5,1,2,3)
+b_vec  <- 40
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+gs.opt <- matrix(,ncol=2,nrow = length(res3.mask.reg))
+for(i in sort(res3.mask.reg)){
+  gs.opt[which(i==(res3.mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/gs5april_ROI_",i,".csv")))
+}
+bases.nb.temp <- matrix(,ncol=1,nrow= choose(max(deg_vec)+dimension,dimension)) 
+
+for(i in res3.mask.reg){
+  poly_degree = param_grid[gs.opt[which(i==(res3.mask.reg)),1],1] #######I forgot that it must the same poly degree....
+  a_concentration= param_grid[gs.opt[which(i==(res3.mask.reg)),1],2]
+  b_smoothness= param_grid[gs.opt[which(i==(res3.mask.reg)),1],3]
+  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',i))
+  
+  nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
+  #re-scale the coordinates
+  nb.centred<- apply(nb$maskcoords,2,norm.func)
+  #re-centre each region
+  #get psi
+  psi.mat.nb <- GP.eigen.funcs.fast(nb.centred, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
+  #get lambda
+  lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = b_smoothness, d = dimension)
+  #Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
+  sqrt.lambda.nb <- sqrt(lambda.nb)
+  bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
+  if(nrow(bases.nb) < choose(max(deg_vec)+dimension,dimension)){
+    empty.expansion <- matrix(0, nrow= choose(max(deg_vec)+dimension,dimension)-nrow(bases.nb), ncol= ncol(bases.nb))
+    bases.nb <- rbind(bases.nb,empty.expansion)
+  }
+  #print(paste0("here, ",i)
+  bases.nb.temp <- cbind(as.matrix(bases.nb.temp),as.matrix(bases.nb))
+}
+colnames(bases.nb.temp) <- NULL
+bases.nb <- as.data.frame(bases.nb.temp[,-1])
+bases.nb <- as.matrix(bases.nb)
+```
+Since I fit horseshoe prior as a whole, I shouldn't segment the bases...
+This involves finding inverse of the whole matrix
+```{r}
+overall_theta <- ginv(t(bases.nb))%*%reg_gp16_fitted
+qqnorm(overall_theta)
+qqline(overall_theta)
+```
+
+
+
+
+Load good result so far
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",45,".csv")))
+full.res.out <- rbind( sqrt(res.nn.loss.sgd.1[2,]),reg_gp16[6] ,wb_23mar.m[1,6],hs_31mar.m[6])
+full.res.in <- rbind(sqrt(res.nn.loss.sgd.1[1,]),reg_gp16[5],wb_23mar.m[1,5],hs_31mar.m[5])
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,], type = line.type, lty = 2,pch=2,col = 3,lwd=2)
+lines(full.res[1,3,],type=line.type,col = 6,lwd=2)
+lines(full.res[1,4,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c("NN","Region_gp","GP_reg","Horseshoe"),lty=c(1,2,1,1), pch = c(1,20,20,20),col=c(1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=1,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,], type = line.type, lty = 2,pch=2,col = 3,lwd=2)
+lines(full.res[2,3,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,4,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('topright',legend = c("NN","Region_gp","GP_reg","Horseshoe"),lty=c(1,2,1,1), pch = c(1,20,20,20),col=c(1,3,6,2))
+```
+
+#14 April
+
+##Load `privar_tune6` for case with inhomogeneous prior variance
+And compare it with previous
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb7_loss_",0.6,"_jobid_",5,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb7_loss_",0.6,"_jobid_",14,".csv"))) #JobId here didn't work, so not the same initialisation
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",45,".csv"))) #this is the best
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_loss_",0.6,"_jobid_",55,".csv")))
+
+full.res.out <- rbind( sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]), sqrt(res.nn.loss.sgd.3[2,]), sqrt(res.nn.loss.sgd.4[2,])
+                       ,wb_23mar.m[1,6],hs_31mar.m[6])
+full.res.in <- rbind(sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]), sqrt(res.nn.loss.sgd.3[1,]) , sqrt(res.nn.loss.sgd.4[1,])
+                     ,wb_23mar.m[1,5],hs_31mar.m[5])
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+prior.var.vec <- c("0.1b","0.5b",0.1,0.5)
+line.type <- 'l'
+plot(full.res[1,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,3,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 4,pch=4,col = 5,lwd=1)
+lines(full.res[1,5,],type=line.type,col = 6,lwd=2)
+lines(full.res[1,6,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c(expression(tau^2),as.character(prior.var.vec)),lty=c(1,c(1:6)), pch = c(1,c(1:6)),col=c("white",1,3:6,2))
+
+#out-of-sample
+plot(full.res[2,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=1,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+# lines(full.res[2,2,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,3,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+# lines(full.res[2,4,], type = "o", lty = 4,pch=4,col = 14,lwd=1)
+lines(full.res[2,5,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,6,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('topright',legend = c(expression(tau^2),as.character(prior.var.vec)),lty=c(1,c(1:6)), pch = c(1,c(1:6)),col=c("white",1,3:4,14,6,2))
+#####
+plot(full.res[2,2,], type = "o", lty = 2,pch=3, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=1,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+# lines(full.res[2,2,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+# lines(full.res[2,3,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 4,pch=4,col = 14,lwd=1)
+lines(full.res[2,5,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,6,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('topright',legend = c(expression(tau^2),as.character(prior.var.vec)),lty=c(1,c(1:6)), pch = c(1,c(1:6)),col=c("white",1,3:4,14,6,2))
+```
+Plot theta
+```{r}
+ theta.sd.mat <- matrix(,ncol=12,nrow = 4)
+ counter <- 1
+ for(i in c(5,14)){
+   theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb7_theta_",0.6,"_jobid_",i,".feather")))
+   theta.sd.mat[counter,] <- apply(theta.sgd, 1, var)
+   counter <- counter+1
+ }
+ for(i in c(45,55)){
+   theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb6_theta_",0.6,"_jobid_",i,".feather")))
+   theta.sd.mat[counter,] <- apply(theta.sgd, 1, var)
+   counter <- counter+1
+ } 
+# theta.sd.mat
+```
+```{r}
+ plot(theta.sd.mat[1,], ylim = c(0,1.1), type = "o", lty = 1,pch=1, ylab="var", main = "Region-wise var after 160 iterations", xlab='Region number')
+ lines(theta.sd.mat[2,], type = "o", lty = 2,pch=2,col = 3)
+ lines(theta.sd.mat[3,], type = "o", lty = 3,pch=4,col = 'grey')
+ lines(theta.sd.mat[4,], type = "o", lty = 3,pch=4,col = 'grey')
+ abline(h=0.1,lty=1,col='grey')
+ abline(h=0.5,lty=1,col='grey')
+ legend('topright',legend = c(expression(tau^2),"0.1b","0.5b"),lty=c(1,1,2), pch = c(1,1,2),col=c("white",1,3))
+```
+
+##Load region-wise NN
+Use seed 18 since they are comparable to each other
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb7_loss_",0.6,"_jobid_",5,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb7_loss_",0.6,"_jobid_",14,".csv"))) #JobId here didn't work, so not the same initialisation
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_reg1_loss_",0.6,"_jobid_",7,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_reg1_loss_",0.6,"_jobid_",17,".csv")))
+
+full.res.out <- rbind( sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]), sqrt(res.nn.loss.sgd.3[2,]), sqrt(res.nn.loss.sgd.4[2,])
+                       ,wb_23mar.m[1,6],hs_31mar.m[6])
+full.res.in <- rbind(sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]), sqrt(res.nn.loss.sgd.3[1,]) , sqrt(res.nn.loss.sgd.4[1,])
+                     ,wb_23mar.m[1,5],hs_31mar.m[5])
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+prior.var.vec <- c("0.1b","0.5b","0.1 reg-nn","0.5 reg-nn")
+line.type <- 'l'
+plot(full.res[1,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,3,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 4,pch=4,col = 5,lwd=1)
+lines(full.res[1,5,],type=line.type,col = 6,lwd=2)
+lines(full.res[1,6,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c(expression(tau^2),as.character(prior.var.vec)),lty=c(1,c(1:6)), pch = c(1,c(1:6)),col=c("white",1,3:6,2))
+
+#out-of-sample
+plot(full.res[2,1,], type = "o", lty = 1,pch=1, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=1,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,3,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 4,pch=4,col = 5,lwd=1)
+lines(full.res[2,5,],type=line.type,col = 6,lwd=2)
+lines(full.res[2,6,],type=line.type,col = 2,lwd=2)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('topright',legend = c(expression(tau^2),as.character(prior.var.vec)),lty=c(1,c(1:6)), pch = c(1,c(1:6)),col=c("white",1,3:6,2))
+```
+
+```{r}
+ theta.sd.mat <- matrix(,ncol=12,nrow = 4)
+ counter <- 1
+ for(i in c(7,17)){
+   theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nn_reg1_theta_",0.6,"_jobid_",i,".feather")))
+   theta.sd.mat[counter,] <- apply(theta.sgd, 1, var)
+   counter <- counter+1
+ }
+# theta.sd.mat
+```
+```{r}
+ plot(theta.sd.mat[1,], ylim = c(0,1.1), type = "o", lty = 1,pch=1, ylab="var", main = "Region-wise var after 160 iterations", xlab='Region number')
+ lines(theta.sd.mat[2,], type = "o", lty = 2,pch=2,col = 3)
+ abline(h=0.1,lty=1,col='grey')
+ abline(h=0.5,lty=1,col='grey')
+ legend('topright',legend = c(expression(tau^2),"0.1","0.5"),lty=c(1,1,2), pch = c(1,1,2),col=c("white",1,3))
+```
 
