@@ -93,7 +93,7 @@ for(i in mask.reg){
   b_smoothness= param_grid[gs.opt[which(i==(mask.reg)),1],3]
   mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_mask_ROI_',i))
   
-  nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
+d  nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
   #re-scale the coordinates
   nb.centred<- apply(nb$maskcoords,2,norm.func)
   #re-centre each region
