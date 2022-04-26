@@ -1815,6 +1815,7 @@ legend('bottomleft',legend = c(expression(tau^2),as.character(prior.var.vec[-c(1
 ```
 lr = 0.1 (or 0.5) seems the best 
 Look at the theta dist
+8 is Basal_Ganglia
 ```{r}
  theta.sd.mat <- matrix(,ncol=12,nrow = 2)
  counter <- 1
@@ -2368,5 +2369,346 @@ plot(x=1:240, y =1*(0.5+1:240)^-0.6/2, ylab = "learning rate", xlab = 'iteration
 abline(h=0,lwd=2,col='red')
 ```
 
+#24 April
+lr = `1*(0.5+it.num)^-0.6/2`
+
+##SGD vs 12x12GP SGD
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd2_loss_","_jobid_",2,".csv")))[,1:160]
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd4_loss_","_jobid_",2,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+Load the result with 12 x 12 gp
+
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd4_loss_","_jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_loss_","_jobid_",4,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld6_loss_","_jobid_",9,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]), sqrt(res.nn.loss.sgd.3[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]), sqrt(res.nn.loss.sgd.3[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+legend('topright',legend = c("method","SGD","SGLD","SGLD_2","GP Reg","HS-prior"),lty=c(1,c(1:5)), pch = c(1,c(1:5)),col=c("white",1,3:4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+#abline(v=4*1:epoch,lwd=0.2)
+# legend('topright',legend = c("method","SGD","SGLD","SGLD_2","GP Reg","HS-prior"),lty=c(1,c(1:5)), pch = c(1,c(1:5)),col=c("white",1,3:4,6,2))
+```
+
+Can use a more refined mask
+
+#25 April
+Consider Cis 4 mask
+Note that region `46` and `47` 46,Globus_Pallidus_L 47,Globus_Pallidus_R
+`CICatlas_Res4_trunc.txt ` says everything above label 55 is not GM, then threshold at 0.1, so 
+```{r}
+temp.img <-oro.nifti::readNIfTI('/well/nichols/users/kfh142/data/Atlas/CIC/MultRes/CICatlas_Res4_2mm.nii.gz')
+#Take only grey matter
+temp.img[temp.img>55] <- 0
+temp.img[temp.img==46] <- 0
+temp.img[temp.img==47] <- 0
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,paste0('/well/nichols/users/qcv214/bnn2/res3/maskfix/res4mask_1'))
+#Load data with new unthreshold mask
+part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
+part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1:(dim(part_use)[1]),1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz')
+res4.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/maskfix/res4mask_1') 
+#threshold at 0.1
+dat_colmeans<-colMeans(res4.dat)
+
+#
+temp.img[temp.img>0][dat_colmeans<0.1] <- 0 
+
+temp.img@datatype = 2
+temp.img@bitpix = 8
+writeNIfTI(temp.img,'/well/nichols/users/qcv214/bnn2/res3/maskfix/res4mask_3') #Correct
+writeNIfTI(temp.img,'/well/nichols/users/qcv214/bnn2/res3/res4mask')
+
+#Load data again using the new thresholded mask
+res4.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res4mask') # 4263 x 156812
+#save datat
+write_feather(as.data.frame(res4.dat), '/well/nichols/users/qcv214/bnn2/res3/res4_dat.feather')
+#reload data and mask
+res4.dat <- read_feather('/well/nichols/users/qcv214/bnn2/res3/res4_dat.feather') #dim = 4263 156812
+res4.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res4mask.nii.gz')
+res4.mask.reg <- setdiff(sort(unique(c(res3.mask))),0)
+```
+
+#26 April
+
+##Compare SGD with no tuning smoothness and tuning smoothness
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnb7_loss_",0.6,"_jobid_",5,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd2_loss_","_jobid_",5,".csv")))[,1:160]
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD with smoothness tuning","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+
+##Compare SGD with fixed lr, 12 GP vs 12x12 GP
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd2_loss_","_jobid_",1,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",8,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD 12x12 GP","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+##Compare SGD with decaying lr and fixed lr 
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",8,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd4_loss_","_jobid_",8,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD fixed lr","SGD decay lr","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+##Comparing SGLD with noise variance reduced by 1, 2, 5
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_loss_","_jobid_",4,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld6_loss_","_jobid_",9,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld7_loss_","_jobid_",4,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]), sqrt(res.nn.loss.sgd.3[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]), sqrt(res.nn.loss.sgd.3[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+legend('topright',legend = c("method","SGD","SGLD","SGLD_2","GP Reg","HS-prior"),lty=c(1,c(1:5)), pch = c(1,c(1:5)),col=c("white",1,3:4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "o", lty = 3,pch=3,col = 4,lwd=1)
+#abline(v=4*1:epoch,lwd=0.2)
+legend('bottomleft',legend = c("method","SGLD","SGLD 1/2","SGLD 1/5","GP Reg","HS-prior"),lty=c(1,c(1:5)), pch = c(1,c(1:5)),col=c("white",1,3:4,6,2))
+```
+Observe theta at original SGLD
+```{r}
+theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/short_nnsgdlsgld5_theta_","_jobid_",1,".feather")))
+```
+```{r}
+plot(x=1:12,y=theta.sgd[,8])
+```
+
+
+##Comparing SGLD with noise variance reduced by factor of 5 and fixed lr
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld7_loss_","_jobid_",4,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld8_loss_","_jobid_",4,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE of SGLD with 1/5 noise variance",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGLD decay","SGLD fixed","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+
+
+
+##Comparing res3 vs res 4 SGD fixed lr
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",8,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_loss_","_jobid_",1,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD fixed lr","SGD decay lr","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
 
 
