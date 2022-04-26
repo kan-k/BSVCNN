@@ -2,7 +2,9 @@
 # This work is built based on YWT's paper on SGLD https://www.stats.ox.ac.uk/~teh/research/compstats/WelTeh2011a.pdf
 # So SGD involves decreasing step size with condition and adding 1/2 to learning rate but 
 
-#SGLD with 12 x 12 GP
+#SGD with 12 x 12 GP
+#Fixed lr = 0.6
+
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
@@ -72,10 +74,10 @@ print("Loading data")
 
 #Load data and mask and GP 
 #mask
-res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res4mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(res3.mask)),0))
 #data
-res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather'))
+res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/res4_dat.feather'))
 #Age
 age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
 age <- age_tab$age
@@ -89,8 +91,8 @@ n.dat <- nrow(res3.dat)
 # for(i in res3.mask.reg){
 #   partial.gp[i,,] <- t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_",i,"_fixed_100.540.feather"))))
 # }
-source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp3.R")
-partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
+source("/well/nichols/users/qcv214/bnn2/res3/res4_first_layer_gp.R")
+partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/res4_partial_gp_centroids_fixed_100.540.feather"))))
 
 time.taken <- Sys.time() - start.time
 cat("Loading data complete in: ", time.taken)
@@ -106,11 +108,8 @@ train.test.ind <- train_test_split(num_datpoint = n.dat, num_test = 2000, num_tr
 
 #NN parameters
 it.num <- 1
-learning_rate <- 1*(0.5+it.num)^-0.6/2 #for slow decay starting less than 1
-gaus.noise <- matrix(,nrow=n.mask, ncol= n.expan)
-for(i in 1:n.mask){
-  gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2))
-}
+learning_rate <- 0.6 #for slow decay starting less than 1
+
 
 epoch <- 60
 #Fix prior var to be 0.1
@@ -129,7 +128,7 @@ for(i in 1:n.mask){
 #1.2 Multiply the partial weights to partial GP and use it as the actual weights of size (p x 1)
 #Initialising weights
 weights <- matrix(, ncol = p.dat, nrow = n.mask)
-for(i in res3.mask.reg){
+for(i in 1:n.mask){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
 #Initialising bias (to 0)
@@ -207,22 +206,19 @@ for(e in 1:epoch){
     
     
     #Update theta matrix
-    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m - gaus.noise #Note that this mean gaussian noise is the same for theta of all regions
+    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update bias
     bias <- bias - learning_rate*c(grad.b.m)
     
     #Update weight
-    for(i in res3.mask.reg){
+    for(i in 1:n.mask){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
     
     it.num <- it.num +1
-    learning_rate <- 1*(0.5+it.num)^-0.6/2
-    for(i in 1:n.mask){
-      gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2))
-    }
+    learning_rate <- 0.6
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
@@ -233,7 +229,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)

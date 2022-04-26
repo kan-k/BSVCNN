@@ -2,7 +2,8 @@
 # This work is built based on YWT's paper on SGLD https://www.stats.ox.ac.uk/~teh/research/compstats/WelTeh2011a.pdf
 # So SGD involves decreasing step size with condition and adding 1/2 to learning rate but 
 
-#SGLD with 12 x 12 GP
+#SGLD with 12 x 12 GP 
+#With reduced random noise in LD by factor of 5
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
@@ -109,7 +110,7 @@ it.num <- 1
 learning_rate <- 1*(0.5+it.num)^-0.6/2 #for slow decay starting less than 1
 gaus.noise <- matrix(,nrow=n.mask, ncol= n.expan)
 for(i in 1:n.mask){
-  gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2))
+  gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2/25))
 }
 
 epoch <- 60
@@ -221,7 +222,7 @@ for(e in 1:epoch){
     it.num <- it.num +1
     learning_rate <- 1*(0.5+it.num)^-0.6/2
     for(i in 1:n.mask){
-      gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2))
+      gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2/25))
     }
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
@@ -233,7 +234,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld7_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld7_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld7_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld7_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)

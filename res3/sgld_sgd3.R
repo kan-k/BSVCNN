@@ -110,7 +110,7 @@ it.num <- 1
 learning_rate <- 1*(0.5+it.num)^-0.6/2 #for slow decay starting less than 1
 
 
-epoch <- 40
+epoch <- 60
 #Fix prior var to be 0.1
 prior_var <- prior.var.mat[JobId,2]
 C2 <- 1/(2*prior_var)

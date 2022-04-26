@@ -112,7 +112,7 @@ for(i in 1:n.mask){
   gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2))
 }
 
-epoch <- 60
+epoch <- 2
 #Fix prior var to be 0.1
 prior_var <- prior.var.mat[JobId,2]
 C2 <- 1/(2*prior_var)
@@ -233,7 +233,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgld5_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/short_nnsgdlsgld5_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/short_nnsgdlsgld5_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/short_nnsgdlsgld5_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/short_nnsgdlsgld5_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
