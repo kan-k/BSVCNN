@@ -1,6 +1,7 @@
 # R script
 # This work is built based on YWT's paper on SGLD https://www.stats.ox.ac.uk/~teh/research/compstats/WelTeh2011a.pdf
 # So SGD involves decreasing step size with condition and adding 1/2 to learning rate but 
+#Reverse sign in pernalty term
 
 #SGD with 12 x 12 GP
 #Fixed lr = 0.6
@@ -20,7 +21,7 @@ JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
 prior.var.vec <- c(0.1,0.5)
-prior.var.mat <- expand.grid(12:21,prior.var.vec)
+prior.var.mat <- expand.grid(2:21,prior.var.vec)
 
 start.time <- Sys.time()
 #1 Split data into mini batches (train and validation)
@@ -114,7 +115,7 @@ learning_rate <- 0.6 #for slow decay starting less than 1
 epoch <- 60
 #Fix prior var to be 0.1
 prior_var <- prior.var.mat[JobId,2]
-C2 <- 1/(2*prior_var)
+C2 <- -1/(2*prior_var)
 
 
 print("Initialisation")
@@ -150,26 +151,26 @@ for(e in 1:epoch){
     
     print(paste0("Epoch: ",e, ", batch number: ", b))
     #3 Feed it to next layer
-# 
+    # 
     print("1")
-#    
+    #    
     hidden.layer <- matrix(,nrow=batch_size,ncol = n.mask)
-# 
+    # 
     print("2")
-#   
+    #   
     for(i in 1:n.mask){
       temp.mul <- (res3.dat[mini.batch$train[[b]], ]  %*% weights[i,]) + bias[i] #Will yield a batch_size x 1 + bias of that region
       #Activate by ReLU and save to hidden layer
       hidden.layer[,i] <- relu(temp.mul) #will yield a vector, not matrix
     }
-# 
+    # 
     print("3")
-#   
+    #   
     #Hidden layer
     z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
-# 
+    # 
     print("4")
-#       
+    #       
     hs_fit_SOI <- fast_horseshoe_lm(age[mini.batch$train[[b]]],z.nb) #This also gives the bias term
     beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
     #Output layer
@@ -240,7 +241,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd2_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd2_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd2_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd2_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)

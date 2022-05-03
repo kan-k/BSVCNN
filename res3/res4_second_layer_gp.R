@@ -41,6 +41,5 @@ lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = 
 #Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
 sqrt.lambda.nb <- sqrt(lambda.nb)
 bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
-bases.nb <- as.matrix(bases.nb)
+partial.gp.centroid <- t(as.matrix(bases.nb))
 
-write_feather(as.data.frame(bases.nb),paste0("/well/nichols/users/qcv214/bnn2/res3/roi/res4_partial_gp_centroids_fixed_",poly_degree,a_concentration,b_smoothness,".feather"))

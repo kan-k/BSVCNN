@@ -9,16 +9,15 @@ p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
 
-#12 x 12 GP
 
 #First layer, compute 12 gps, mask already have loaded mask/mask.reg AND have mask_ROI ready to load
 dimension = 3
-deg_vec<- c(5)
+deg_vec<- c(6)
 a_vec  <- c(1,2,3,4,5)
 b_vec  <- c(30,40,50,60,70,80,90,100)
 param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res4mask.nii.gz')
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(mask_subcor)),0))
 masked.reg <- mask_subcor[mask_subcor>0]
 #load preset
@@ -31,7 +30,7 @@ img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/dat
 
 gs.opt <- matrix(,ncol=2,nrow = length(res3.mask.reg))
 for(i in sort(res3.mask.reg)){
-  gs.opt[which(i==(res3.mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/res4_gs26april_ROI_",i,".csv")))
+  gs.opt[which(i==(res3.mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/gs21april_ROI_",i,".csv")))
 }
 
 # bases.nb.temp <- matrix(,ncol=1,nrow= choose(max(deg_vec)+dimension,dimension))
@@ -41,7 +40,7 @@ for(i in sort(res3.mask.reg)){
 partial.gp <- array(, dim = c(length(res3.mask.reg),p.dat,n.expan))
 for(i in res3.mask.reg){
   #Load region mask
-  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/res4_mask_ROI_',i))
+  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',i))
   nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
   #Get the centre of the region
   nb.centre<- apply(nb$maskcoords,2,median)
@@ -67,7 +66,7 @@ for(i in res3.mask.reg){
   nb.full$maskcoords[,3] <- nb.full$maskcoords[,3]/z.scaler
   
   #get psi for Region 1
-  poly_degree = 10
+  poly_degree = deg_vec
   a_concentration = param_grid[gs.opt[which(1==(res3.mask.reg)),1],2]
   b_smoothness = param_grid[gs.opt[which(1==(res3.mask.reg)),1],3]
   psi.mat.nb <- GP.eigen.funcs.fast(nb.full$maskcoords, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
@@ -79,7 +78,7 @@ for(i in res3.mask.reg){
   bases.nb.to.use <- t(as.matrix(bases.nb))
   #Get psi for other regions  
   for(m in setdiff(res3.mask.reg,1)){
-    poly_degree = 10
+    poly_degree = deg_vec
     a_concentration = param_grid[gs.opt[which(m==(res3.mask.reg)),1],2]
     b_smoothness = param_grid[gs.opt[which(m==(res3.mask.reg)),1],3]
     psi.mat.nb <- GP.eigen.funcs.fast(nb.full$maskcoords, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
@@ -91,5 +90,5 @@ for(i in res3.mask.reg){
     bases.nb.to.use[m==masked.reg,] <- (t(as.matrix(bases.nb)))[m==masked.reg,]
   }
   
-  partial.gp[which(i==res3.mask.reg),,] <- (bases.nb.to.use)
+  partial.gp[i,,] <- (bases.nb.to.use)
 }
