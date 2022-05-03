@@ -2678,9 +2678,105 @@ legend('topright',legend = c("method","SGLD decay","SGLD fixed","GP Reg","HS-pri
 
 
 ##Comparing res3 vs res 4 SGD fixed lr
+res4 SGD: `66590926`
+none of the jobs manage to finished but also didn't show any error
 ```{r}
 res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",8,".csv")))
 res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/res4_nnsgdlsgd1_loss_","_jobid_",1,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+Observe sgd5 jobid 8, and Manually load the res 4 sgd job id 8 too
+
+I used `grep -i "training loss" nn.sh.o66590926.8 > ../res4temp.txt`
+and `grep -i "validation loss" nn.sh.o66590926.8 > ../res4temp_val.txt`
+```{r}
+res4.train <- as.matrix(read.delim("/users/nichols/qcv214/res4temp.txt", header = FALSE))
+res4.train <- as.numeric(gsub(".*:","",res4.train))
+res4.val <- as.matrix(read.delim("/users/nichols/qcv214/res4temp_val.txt", header = FALSE))
+res4.val <- as.numeric(gsub(".*:","",res4.val))
+```
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",8,".csv")))[,1:192]
+res.nn.loss.sgd.2 <- rbind(res4.train,res4.val)[,1:192]
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+
+
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(3.5, max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+# lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD fixed lr","SGD decay lr","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+#27 April
+
+Assess magnitude of theta after 2 epochs/8 ietrations from job `66165476`
+```{r}
+theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/short_nnsgdlsgld5_theta_","_jobid_",1,".feather")))
+```
+```{r}
+gaus.noise <- matrix(,nrow=12, ncol= 286)
+set.seed(12)
+for(i in 1:12){
+      gaus.noise[i,] <- rnorm(286,0,sqrt((1*(0.5+8)^-0.6/2)*2))
+}
+
+```
+```{r}
+c1 <- rgb(173,216,230,max = 255, alpha = 80, names = "lt.blue")
+c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
+for(i in 1:nrow(theta.sgd)){
+  hist.temp<-hist(theta.sgd[i,])
+  hist.gaus<-hist(gaus.noise[i,])
+  plot(hist.temp, main = paste0("Region ",i),col=c1)
+  plot(hist.gaus, add = TRUE, col = c2)
+}
+```
+
+
+
+
+
+
+#28 Apr 
+
+##Sign wrong for L2 reg
+I think I got the sign wrong for penalty, according to https://arxiv.org/pdf/1904.10939 C2 should be negative
+
+Compare if sign had an effect,
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd7_loss_","_jobid_",10,".csv")))
 
 full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
                        sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
@@ -2708,7 +2804,85 @@ plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(ful
 lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
 lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
 lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
-legend('topright',legend = c("method","SGD fixed lr","SGD decay lr","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+legend('topright',legend = c("method","SGD wrong penalty","SGD corrected penalty","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
 ```
 
 
+
+#1 May
+##Simulation study
+Sub-sample res3 by 1/10
+```{r}
+# res3.dat <- read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather') #dim = 4263 124859
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask.reg <- setdiff(sort(unique(c(res3.mask))),0)
+```
+
+```{r}
+masked.index <- seq_along(res3.mask[res3.mask>0])
+res3.mask[res3.mask>0][(masked.index%%10)!=0] <- 0
+res3.mask@datatype = 2
+res3.mask@bitpix = 8
+writeNIfTI(res3.mask,paste0('/well/nichols/users/qcv214/bnn2/res3/sim/res3_sub'))
+```
+```{r}
+sub.res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/sim/res3_sub.nii.gz')
+sub.res3.mask.reg <- setdiff(sort(unique(c(res3.mask))),0)
+```
+```{r}
+part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
+part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+# 
+list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1:(dim(part_use)[1]),1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz')
+sub.res3.dat <- fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/sim/res3_sub') # 4263 x 156812
+#save datat
+write_feather(as.data.frame(sub.res3.dat), '/well/nichols/users/qcv214/bnn2/res3/sim/sub_res3_dat.feather')
+```
+
+
+#2 May
+##Plot `sim_hs`
+```{r}
+hs_2may<-array(,dim=c(20,13))
+failed_run<-c(1)
+for(i in setdiff(1:20,failed_run)){
+      hs_2may[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hs_noscale_",i,".csv")))
+}
+hs_2may <- hs_2may[-failed_run,]
+hs_2may.m<-apply(hs_2may, c(2), median)
+hs_2may.m[6]
+
+```
+
+
+##Plot `sim_hs`
+```{r}
+poly_degree = 10
+a_concentration = 0.5
+b_smoothness = 40
+wb_2may<-array(,dim=c(20,14))
+failed_run<-c(1)
+for(i in setdiff(1:20,failed_run)){
+      wb_2may[i,] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb_",poly_degree,a_concentration,b_smoothness,"_",i,".csv")))
+}
+wb_2may <- wb_2may[-failed_run,]
+wb_2may.m<-apply(wb_2may, c(2), median)
+wb_2may.m[6]
+```
+
+```{r}
+plot(hs_2may[,6],ylim = c(4.5,5))
+lines(wb_2may[,6],col='red')
+abline(v=4)
+```
+From the plot, use `seed 4`
+
+Sanity check if seed 4 of `sim_hs` and `sim_wb` give the same 
+```{r}
+ind.hs <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hs_index_",4,".csv"))
+ind.wb <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb_index_",4,".csv"))
+(sum(ind.hs[1,] == ind.wb[1,])) == 2000 #Yes
+```
+
+Load `nnvtrue`
