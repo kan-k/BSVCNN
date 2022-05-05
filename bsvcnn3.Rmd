@@ -2726,7 +2726,7 @@ plot(full.res[1,1,],type=line.type,col = 6, ylim = c(3.5, max(full.res[1,,])),lw
 # lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
 lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
 lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
-legend('topright',legend = c("method","SGD","SGD_2","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+legend('topright',legend = c("method","12 Regions","55 Regions","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
 
 #out-of-sample
 plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
@@ -2735,7 +2735,7 @@ plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(ful
 lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
 lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
 lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
-legend('topright',legend = c("method","SGD fixed lr","SGD decay lr","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+legend('topright',legend = c("method","12 Regions","55 Regions","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
 ```
 
 #27 April
@@ -2756,13 +2756,27 @@ for(i in 1:12){
 c1 <- rgb(173,216,230,max = 255, alpha = 80, names = "lt.blue")
 c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 for(i in 1:nrow(theta.sgd)){
-  hist.temp<-hist(theta.sgd[i,])
-  hist.gaus<-hist(gaus.noise[i,])
-  plot(hist.temp, main = paste0("Region ",i),col=c1)
+  hist.temp<-hist(theta.sgd[i,], breaks = seq(from=-10, to=10, by=0.5))
+  hist.gaus<-hist(gaus.noise[i,], breaks = seq(from=-10, to=10, by=0.5))
+  plot(hist.temp, main = paste0("Region ",i),col=c1, ylim=c(0,120))
   plot(hist.gaus, add = TRUE, col = c2)
 }
 ```
 
+```{r}
+for(i in 1:12){
+  boxplot(
+    abs(gaus.noise[i,]/theta.sgd[i,]), ylab = "Magnitude of relative strength of noise", main = paste0("Boxplot of Region ", i))
+}
+```
+
+Plot the % changed after adding gaussing noise to theta
+```{r}
+for(i in 1:12){
+  plot((
+    gaus.noise[i,])/theta.sgd[i,]*100, ylab=paste0("% change in ", "theta","  with noise"), xlab="basis #", main = paste0("Region ", i))
+}
+```
 
 
 
@@ -2886,3 +2900,171 @@ ind.wb <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb_inde
 ```
 
 Load `nnvtrue`
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_nnvtrue_loss__jobid_",1,".csv")))
+
+full.res.out <- rbind( wb_2may[4,6],hs_2may[4,6],
+                       sqrt(res.nn.loss.sgd.1[2,]))
+full.res.in <- rbind(wb_2may[4,5],hs_2may[4,5],
+                     sqrt(res.nn.loss.sgd.1[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+legend('topright',legend = c("method","SGD","GP Reg","HS-prior"),lty=c(1,c(1:3)), pch = c(1,c(1:3)),col=c("white",1,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+legend('topright',legend = c("method","SGD ","GP Reg","HS-prior"),lty=c(1,c(1:3)), pch = c(1,c(1:3)),col=c("white",1,6,2))
+```
+
+
+
+#3May
+
+##Assess decreasing poly_degree
+`sgd4.R` vs `sgd5.R`
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd5_loss_","_jobid_",3,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd6_loss_","_jobid_",13,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(3.5, max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","poly_deg = 10","poly_deg = 6","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","poly_deg = 10","poly_deg = 6","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+
+##Assess changing penalty sign
+`sgd5.R` vs `sgd6.R`
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd6_loss_","_jobid_",3,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/nnsgdlsgd7_loss_","_jobid_",3,".csv")))
+
+full.res.out <- rbind( wb_23mar.m[1,6],hs_31mar.m[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb_23mar.m[1,5],hs_31mar.m[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(3.5, max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD wrong penalty","SGD corrected penalty","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","SGD wrong penalty","SGD corrected penalty","GP Reg","HS-prior"),lty=c(1,c(1:4)), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+
+
+
+##For simulation
+`gs_v_hs.R` is still not working, I keep getting `warning: chol(): given matrix is not symmetric`
+Some are NA because it's my 4000 subjects don't span the entire 4xxx indices in dat.age
+<<< Fix, see `gs_v_wb.R`
+
+#5 May
+##gs_v_wb
+From looking at result of `gs_v_wb` and `gs_v_wb_test`, I have realised that `gs_v_wb` tries to achieve `sim_wb` parameters but cannot as the set of parameter isn't included
+
+##nn_v_wb2
+Note that my sim_wb2 and gs uses poly deg = 10, but my nn will use poly_deg = 6
+
+So let wb be the artificial data data, compare nn and hs against it
+
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_nnvwb_loss__jobid_",1,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[6],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+legend('topright',legend = c("method","SGD","GP Reg","HS-prior"),lty=c(1,c(1:3)), pch = c(1,c(1:3)),col=c("white",1,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+legend('topright',legend = c("method","SGD ","GP Reg","HS-prior"),lty=c(1,c(1:3)), pch = c(1,c(1:3)),col=c("white",1,6,2))
+```
+
+
+visualise wb2 as real then vs hs coefficients
+```{r}
+gp.mask.hs <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/sim/res3_sub.nii.gz')
+gp.mask.hs[gp.mask.hs!=0] <- read_ paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_coef_',JobId,'.feather'))
+gp.mask.hs@datatype = 16
+gp.mask.hs@bitpix = 32
+writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/viz/wb_gp_hs_',poly_degree,a_concentration,b_smoothness))
+```
+
+
