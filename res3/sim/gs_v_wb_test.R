@@ -32,13 +32,13 @@ dat_allmat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/sim/s
 # age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
 # dat.age <- age_tab$age
 
-ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hs_index_",4,".csv"))
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb_index_",4,".csv"))
 train.test.ind <- list()
 train.test.ind$test <- ind.temp[2,]
 train.test.ind$train <- ind.temp[1,]
 
-hs.out<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hs_outpred_noscale_",4,".csv"))
-hs.in<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hs_inpred_noscale_",4,".csv"))
+hs.out<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb_outpred_noscale_",4,".csv"))
+hs.in<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb_inpred_noscale_",4,".csv"))
 
 age_tab<- as.data.frame(cbind(c(unlist(train.test.ind$test),unlist(train.test.ind$train)),
                               c(unlist(hs.out),unlist(hs.in))))
@@ -109,8 +109,8 @@ for(k in mask.reg.part[[JobId]]){
   
   #Get bases matrices
   deg_vec<- c(10)
-  a_vec  <- c(1,2,3,4,5)
-  b_vec  <- c(30,40,50,60,70,80,90,100)
+  a_vec  <- c(2,1,3,4,5)
+  b_vec  <- c(40,30,50,60,70,80,90,100)
   param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
   
   
@@ -184,5 +184,5 @@ for(k in mask.reg.part[[JobId]]){
     }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
   }
   opt.pos <- c(which.max(res.pos[,1]),which.min(res.pos[,2]))
-  write.csv(opt.pos,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_gs_v_hs_ROI_",k,".csv"), row.names = FALSE)
+  write.csv(opt.pos,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_gs_v_wb_ROI_",k,"_test.csv"), row.names = FALSE)
 }
