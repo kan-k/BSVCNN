@@ -38,7 +38,9 @@ train.test.ind$test <- ind.temp[2,]
 train.test.ind$train <- ind.temp[1,]
 
 hs.out<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_noscale_",4,".csv"))
-hs.in<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_inpred_noscale_",4,".csv"))
+# Update with noise added age
+hs.in <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_inpred_4_addednoise.csv"))
+# hs.in <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_inpred_noscale_",4,".csv"))
 
 age_tab<- as.data.frame(cbind(c(unlist(train.test.ind$test),unlist(train.test.ind$train)),
                               c(unlist(hs.out),unlist(hs.in))))

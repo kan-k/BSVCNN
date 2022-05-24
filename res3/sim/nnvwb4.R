@@ -1,10 +1,10 @@
 # R script
 
 ## Increase num epoch to 200
-##Create adaptive penalty term
+## AND
+## Reduce lr to 0.05
 
 #SGD with 12 x 12 GP
-#Fixed lr = 0.6
 
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
@@ -124,7 +124,7 @@ train.test.ind$train <- unlist(ind.temp[1,])
 
 #NN parameters
 it.num <- 1
-learning_rate <- 0.6 #for slow decay starting less than 1
+learning_rate <- 0.01 #for slow decay starting less than 1
 
 
 epoch <- 200
@@ -233,12 +233,8 @@ for(e in 1:epoch){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
     
-    #Update Cv
-    prior_var <- apply(theta.matrix, 1, var)
-    C2 <- 1/(2*prior_var)
-    
     it.num <- it.num +1
-    learning_rate <- 0.6
+    learning_rate <- 0.01
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
@@ -249,7 +245,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)

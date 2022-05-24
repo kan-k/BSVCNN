@@ -30,8 +30,11 @@ train.test.ind <- list()
 train.test.ind$test <- ind.temp[2,]
 train.test.ind$train <- ind.temp[1,]
 
-hs.out<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_noscale_",4,".csv"))
-hs.in<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_inpred_noscale_",4,".csv"))
+# hs.out<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_noscale_",4,".csv"))
+hs.out<- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_4_addednoise.csv"))
+# Update with noise added age
+hs.in <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_inpred_4_addednoise.csv"))
+# hs.in <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_inpred_noscale_",4,".csv"))
 
 age_tab<- as.data.frame(cbind(c(unlist(train.test.ind$test),unlist(train.test.ind$train)),
                               c(unlist(hs.out),unlist(hs.in))))
@@ -106,10 +109,10 @@ pred_prior<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$tr
 pred_prior_new<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$test, ])))$mean
 print(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test))
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hsvwb_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hsvwb_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hsvwb_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 
 ####Result to use
-write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_hsvwb_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_hsvwb_coef_',JobId,'.feather'))
+write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_coef_',JobId,'.feather'))

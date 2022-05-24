@@ -4,7 +4,6 @@
 ##Create adaptive penalty term
 
 #SGD with 12 x 12 GP
-#Fixed lr = 0.6
 
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
@@ -16,6 +15,7 @@ p_load(feather)
 p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
+p_load(nimble)
 
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
@@ -92,7 +92,7 @@ age <- age_tab$age
 
 
 n.mask <- length(res3.mask.reg)
-n.expan <- choose(10+3,3)
+n.expan <- choose(6+3,3)
 p.dat <- ncol(res3.dat)
 n.dat <- nrow(res3.dat)
 
@@ -123,23 +123,29 @@ train.test.ind$test <- unlist(ind.temp[2,])
 train.test.ind$train <- unlist(ind.temp[1,])
 
 #NN parameters
-it.num <- 1
-learning_rate <- 0.6 #for slow decay starting less than 1
+it.num <- 0
 
+
+theta.matrix <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwb4_theta_',"_jobid_",10,'.feather')))
 
 epoch <- 200
-#Fix prior var to be 0.1
-prior_var <- prior.var.mat[JobId,2]
+#Use sample variance from previously-run results
+prior_var <- apply(theta.matrix, 1, var)
 C2 <- 1/(2*prior_var)
+gaus.noise <- matrix(,nrow=n.mask, ncol= n.expan)
+
+#Initial parameters for inverse gamma
+alpha.shape <- rep(0.001,n.mask) #shape
+beta.scale <- rep(0.001,n.mask) #scale
 
 
 print("Initialisation")
 #1 Initialisation
 #1.1 Initialise the partial weights around normal dist as a matrix of size (nrow(bases..ie choose...) x number of neurons in 2nd layer ie#regions)
-theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
-for(i in 1:n.mask){
-  theta.matrix[i,] <- rnorm(n.expan,0,sqrt(prior_var))
-}
+# theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
+# for(i in 1:n.mask){
+#   theta.matrix[i,] <- rnorm(n.expan,0,sqrt(prior_var))
+# }
 
 #1.2 Multiply the partial weights to partial GP and use it as the actual weights of size (p x 1)
 #Initialising weights
@@ -163,6 +169,15 @@ for(e in 1:epoch){
   time.epoch <-  Sys.time()
   #Start batch
   for(b in 1:num.batch){
+    
+    #specifying lr
+    it.num <- it.num +1
+    learning_rate <- 1*(0.5+it.num)^-0.6/2 #for slow decay starting less than 1
+    #Specifying gaussian noise
+    for(i in 1:n.mask){
+      gaus.noise[i,] <- rnorm(n.expan,0,sqrt(learning_rate*2))
+    }
+    #
     
     print(paste0("Epoch: ",e, ", batch number: ", b))
     #3 Feed it to next layer
@@ -222,7 +237,7 @@ for(e in 1:epoch){
     
     
     #Update theta matrix
-    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m
+    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m - gaus.noise
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update bias
@@ -234,11 +249,15 @@ for(e in 1:epoch){
     }
     
     #Update Cv
-    prior_var <- apply(theta.matrix, 1, var)
+    
+    for(i in 1:n.mask){
+      alpha.shape[i] <- alpha.shape[i] + length(theta.matrix[i,])/2
+      beta.scale[i] <- beta.scale[i] + sum(theta.matrix[i,]^2)/2
+      prior_var[i] <- rinvgamma(n = 1, alpha.shape[i], scale = beta.scale[i])
+    }
+    
     C2 <- 1/(2*prior_var)
     
-    it.num <- it.num +1
-    learning_rate <- 0.6
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
@@ -249,7 +268,7 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbbayes_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
