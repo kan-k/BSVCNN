@@ -4135,5 +4135,721 @@ grid(nx = NULL, ny = NULL,
 
 
 
+#17 May
+
+##Find R^2 of hsp
+Beta RMSE may not be represenative as beta may not be unique due to collinearity 
+```{r}
+hs.res[1]
+hs.res[3]
+```
+
+##Plot densities of coeff
+```{r}
+# plot(density(wb.coef),xlim= c(-3,3))
+plot(density(hs.coef),xlim= c(-3,3), main = 'Coefficient Densities')
+lines(density(wb.coef),col='red',lwd=2)
+legend('topright',legend = c("True Coef", "HSP Coef"),lty=1,lwd = 2,col=c("red","black"))
+
+plot(density(hs.coef),xlim= c(-0.45,0.45), main = 'Coefficient Densities')
+lines(density(wb.coef),col='red',lwd=2)
+legend('topright',legend = c("True Coef", "HSP Coef"),lty=1,lwd = 2,col=c("red","black"))
+
+# plot(density(hs.coef),xlim= c(-0.35,-0.3), ylim = c(0,0.5), main = 'Coefficient Densities')
+# lines(density(wb.coef),col='red',lwd=2)
+# legend('topright',legend = c("True Coef", "HSP Coef"),lty=1,lwd = 2,col=c("red","black"))
+```
+
+#Show gridsearch result
+truth: 
+concentration = 2
+smoothness = 40
+
+Load grid search
+```{r}
+  deg_vec<- c(10)
+  a_vec  <- c(1,2,3,4,5)
+  b_vec  <- c(30,40,50,60,70,80,90,100)
+  param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+  gs.opt <- matrix(,ncol=2,nrow = length(mask.reg))
+for(i in sort(mask.reg)){
+  gs.opt[which(i==(mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_gs_v_wb2_ROI_",i,".csv")))
+}
+# table(param_grid[gs.opt[,1],1])
+table(param_grid[gs.opt[,1],2])/12
+table(param_grid[gs.opt[,1],3])/12
+```
+
+
+
+##Plot all NNs
+### nnvwb
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb_loss__jobid_",10,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]))
+                     
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(min(full.res[1,,]), max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+legend('bottomright',legend = c("method","SGD vs GP-Reg","Synthetic noise","HSP vs GP-Reg"),lty=c(1,c(1:3)), pch = c(1,c(1:3)),col=c("white",1,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+legend('topright',legend = c("method","SGD vs GP-Reg","Synthetic noise","HSP vs GP-Reg"),lty=c(1,c(1:3)), pch = c(1,c(1:3)),col=c("white",1,6,2))
+```
+
+### Increasing poly deg
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwb_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwbhighdeg_loss__jobid_",10,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('bottomright',legend = c("method","polydeg=6","polydeg=15","Synthetic noise","HSP vs GP-Reg"),lty=c(1,c(1:2),1,1), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = c("method","polydeg=6","polydeg=15","Synthetic noise","HSP vs GP-Reg"),lty=c(1,c(1:2),1,1), pch = c(1,c(1:4)),col=c("white",1,3,6,2))
+```
+
+
+##Decreasing lr to 0.01
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwb2_loss__jobid_",5,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwb4_loss__jobid_",5,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,ncol(res.nn.loss.sgd.2)-ncol(res.nn.loss.sgd.1))), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,ncol(res.nn.loss.sgd.2)-ncol(res.nn.loss.sgd.1))), sqrt(res.nn.loss.sgd.2[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","lr=0.6", "lr=0.01","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
+```
+
+
+##Decreasing lr and extending epoch
+
+
+##CV bayes estimator
+lr=0.6
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwb2_loss__jobid_",5,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_nnvwbbayes_loss__jobid_",5,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,ncol(res.nn.loss.sgd.2)-ncol(res.nn.loss.sgd.1))), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,ncol(res.nn.loss.sgd.2)-ncol(res.nn.loss.sgd.1))), sqrt(res.nn.loss.sgd.2[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","fixed Cv", "Emp. Bayes Cv","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
+```
+
+
+##SGD with inverse-gamma
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",20,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbig_loss__jobid_",20,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGD-IG","Synthetic noise","HSP vs GP-Reg")
+
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,])),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2), pch = c(1,c(1:4)))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,]), max(full.res[2,,])),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "o", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "o", lty = 2,pch=2,col = 3,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2), pch = c(1,c(1:4)))
+
+```
+
+
+##SGLD with inverse-gamma 
+Run after nnvwb4
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_loss__jobid_",10,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGLD","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
+```
+
+##SGLD with inverse-gamma Compare
+Run after nnvwb4
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig3_loss__jobid_",10,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGLD", "SGLD-reduced","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+
+##SGLD with inverse-gamma vs hs
+Run after nnvwb4
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldig_loss__jobid_",19,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwbsgldhc_loss__jobid_",19,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGLD-IG", "SGLD-HC","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+
+
+#21 May
+Corrected Inverse-Gamma update
+##SGLD with inverse-gamma Compare
+Run after nnvwb4
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n21_nnvwbsgldig_loss__jobid_",11,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n21_nnvwbsgldig3_loss__jobid_",10,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGLD", "SGLD-reduced","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+
+#27 May
+
+##SGLD Half Cauchy
+25 May
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n21_nnvwbsgldig_loss__jobid_",11,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n25_nnvwbsgldhc_loss__jobid_",14,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGLD-IG", "SGLD-HC","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(#min(full.res[2,,],na.rm = TRUE)
+                                                     4, max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+
+##SGD with IG and Half Cauchy
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n26_nnvwbig_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n26_nnvwbhc_loss__jobid_",16,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+```
+```{r}
+leglab <- c("method","SGD", "SGD-IG", "SGD-HC","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+
+```{r}
+density(c(beta_fit$HS %*% (relu.prime(bias+weights%*%res3.dat[1,])*weights)))
+```
+
+
+
+#5 June
+Load compiled saliency from `saliency3.R`
+load `sgld_ig4.R` and `sgld_hc3.R` for low starting noise SGLD
+
+##Saliency variance
+Use seed 11 
+```{r}
+saliency.array <- array(,dim=c(3,2000,p.dat))
+for(e in c(100,150,200)){
+  saliency.array[which(e==c(100,150,200)),,] <- as.matrix(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/saliencymatrix_j1_seed_',11,"_epoch_",e)))
+}
+saliency.array.m <-apply(saliency.array, c(1,3), var)
+for(e in c(100,150,200)){
+  print(summary(saliency.array.m[which(e==c(100,150,200)),]))
+}
+
+```
+```{r}
+boxplot(t(saliency.array.m), ylab="variance",main = "Voxel saliency variance by number of epochs", xlab="epochs")
+```
+
+```{r}
+for(e in c(100,150,200)){
+      gp.mask.hs <- res3.mask
+      gp.mask.hs[gp.mask.hs!=0] <- saliency.array.m[which(e==c(100,150,200)),]
+      gp.mask.hs@datatype = 16
+      gp.mask.hs@bitpix = 32
+      writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/sim/viz/saliency_variance_seed_',11,"_epoch_",e))
+}
+```
+##SGLD IG and HC
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_j1_nnvwbsgldig_loss__jobid_",5,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_j1_nnvwbsgldhc_loss__jobid_",5,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","SGD", "SGLD-IG", "SGLD-HC","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(#min(full.res[2,,],na.rm = TRUE)
+                                                     4, max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+```{r}
+plot(y=(0.5+1:800)^-0.6/2,x=1:800,type='l', main= "Learning rate", ylab = "learning rate", xlab = "# iteration",lwd=2)
+lines((50+1:800)^-0.9/2,col='red',lwd=2)
+legend('topright',legend = c('High','Low'),lty=c(1,1),col=c(1,2))
+```
+
+
+#6 June
+
+Transform saliency variance
+Tom suggest can look at s.d. (e.g. sqrt the variance)
+But doing log() can amplify the effect
+so
+```{r}
+saliency.array <- array(,dim=c(3,2000,p.dat))
+for(e in c(100,150,200)){
+  saliency.array[which(e==c(100,150,200)),,] <- as.matrix(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/saliencymatrix_j1_seed_',11,"_epoch_",e)))
+}
+saliency.array.m <-apply(saliency.array, c(1,3), var)
+saliency.array.m <- log(saliency.array.m + 1e-13)
+for(e in c(100,150,200)){
+  print(summary(saliency.array.m[which(e==c(100,150,200)),]))
+}
+#Box plot
+boxplot(t(saliency.array.m), ylab="variance",main = "Voxel saliency variance by number of epochs", xlab="epochs")
+#Save viz
+for(e in c(100,150,200)){
+      gp.mask.hs <- res3.mask
+      gp.mask.hs[gp.mask.hs!=0] <- saliency.array.m[which(e==c(100,150,200)),]
+      gp.mask.hs@datatype = 16
+      gp.mask.hs@bitpix = 32
+      writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/sim/viz/saliency_LOGvariance_seed_',11,"_epoch_",e))
+}
+```
+
+visualising on FSLeyes will invert the image, so the sign will be flipped hence I will translate the image insteat
+```{r}
+saliency.array <- array(,dim=c(3,2000,p.dat))
+for(e in c(100,150,200)){
+  saliency.array[which(e==c(100,150,200)),,] <- as.matrix(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/saliencymatrix_j1_seed_',11,"_epoch_",e)))
+}
+saliency.array.m <-apply(saliency.array, c(1,3), var)
+saliency.array.m <- log(saliency.array.m + 1e-13)+24
+for(e in c(100,150,200)){
+  print(summary(saliency.array.m[which(e==c(100,150,200)),]))
+}
+#Box plot
+boxplot(t(saliency.array.m), ylab="variance",main = "Voxel saliency variance by number of epochs", xlab="epochs")
+#Save viz
+for(e in c(100,150,200)){
+      gp.mask.hs <- res3.mask
+      gp.mask.hs[gp.mask.hs!=0] <- saliency.array.m[which(e==c(100,150,200)),]
+      gp.mask.hs@datatype = 16
+      gp.mask.hs@bitpix = 32
+      writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/sim/viz/saliency_translatedLOGvariance_seed_',11,"_epoch_",e))
+}
+```
+Since log invert the effect,
+Try squarerooting 
+```{r}
+saliency.array <- array(,dim=c(3,2000,p.dat))
+for(e in c(100,150,200)){
+  saliency.array[which(e==c(100,150,200)),,] <- as.matrix(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/saliencymatrix_j1_seed_',11,"_epoch_",e)))
+}
+saliency.array.m <-apply(saliency.array, c(1,3), sd)
+# saliency.array.m <- log(saliency.array.m + 1e-13)
+for(e in c(100,150,200)){
+  print(summary(saliency.array.m[which(e==c(100,150,200)),]))
+}
+#Box plot
+boxplot(t(saliency.array.m), ylab="variance",main = "Voxel saliency sd by number of epochs", xlab="epochs")
+abline(h=0.0005,col='red')
+# abline(h=0.0045,col='red')
+#Save viz
+for(e in c(100,150,200)){
+      gp.mask.hs <- res3.mask
+      gp.mask.hs[gp.mask.hs!=0] <- saliency.array.m[which(e==c(100,150,200)),]
+      gp.mask.hs@datatype = 16
+      gp.mask.hs@bitpix = 32
+      writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/sim/viz/saliency_sd_seed_',11,"_epoch_",e))
+}
+```
+
+Squarerooting s.d.
+```{r}
+saliency.array <- array(,dim=c(3,2000,p.dat))
+for(e in c(100,150,200)){
+  saliency.array[which(e==c(100,150,200)),,] <- as.matrix(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/saliencymatrix_j1_seed_',11,"_epoch_",e)))
+}
+saliency.array.m <-apply(saliency.array, c(1,3), sd)
+saliency.array.m <- sqrt(saliency.array.m)
+for(e in c(100,150,200)){
+  print(summary(saliency.array.m[which(e==c(100,150,200)),]))
+}
+#Box plot
+boxplot(t(saliency.array.m), ylab="variance",main = "Voxel saliency sd by number of epochs", xlab="epochs")
+#Save viz
+for(e in c(100,150,200)){
+      gp.mask.hs <- res3.mask
+      gp.mask.hs[gp.mask.hs!=0] <- saliency.array.m[which(e==c(100,150,200)),]
+      gp.mask.hs@datatype = 16
+      gp.mask.hs@bitpix = 32
+      writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/sim/viz/saliency_sqrtsd_seed_',11,"_epoch_",e))
+}
+```
+
 
 
