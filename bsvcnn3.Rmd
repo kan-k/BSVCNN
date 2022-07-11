@@ -5794,11 +5794,16 @@ lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
 # lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
 legend('topright',legend = leglab,lty=c(1,c(1:2),1,1),col=c("white",1,3,6,2))
 ```
+RMSE:
+```{r}
+sqrt(res.nn.loss.sgd.2[,1600])
+```
+
 Find R-square too
 Load 
 ```{r}
-p.in.sgd <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju3_nnvwb4_inpred__jobid_2.feather')))
-p.out.sgd <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju3_nnvwb4_outpred__jobid_2.feather')))
+p.in.sgd <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_j29_nnvwb4_inpred__jobid_2.feather')))
+p.out.sgd <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_j29_nnvwb4_outpred__jobid_2.feather')))
 colnames(p.in.sgd) <- c('id','pred')
 colnames(p.out.sgd) <- c('id','pred')
 
@@ -6102,6 +6107,7 @@ lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
 lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
 legend('topright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
 ```
+
 ## Predictive interval
 ###Using RMSE of True model
 
@@ -6381,4 +6387,77 @@ abline(v=(1:no.obs)*stat.out.ig$true.covermod[1:no.obs],lty=2,col='darkgreen',lw
 abline(v=(1:no.obs)*(1-stat.out.ig$true.covermod[1:no.obs]),lty=2,col='grey',lwd=0.5)
 abline(v=0,col='white',lwd=3)
 ```
+RMSE and Rsq
+
+```{r}
+print(paste0('in RMSE: ',sqrt(mean((stat.in.ig$mean-stat.in.ig$true)^2))))
+print(paste0('out RMSE: ',sqrt(mean((stat.out.ig$mean-stat.out.ig$true)^2))))
+print(paste0('True noise: 4.58'))
+```
+```{r}
+#SGLD
+rsqcal(stat.in.ig$true,stat.in.ig$mean) # In-sample
+rsqcal(stat.out.ig$true,stat.out.ig$mean) #Out-of-sample
+
+```
+
+#6 July
+
+Plot of predictions against truth
+
+```{r}
+plot(y=stat.in.ig$mean, x = stat.in.ig$true, ylab="Mean Predicted age (years)", xlab = "Synthetic response (years)", main = "Synthetic response against SGLD")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+```
+correlation
+```{r}
+cor(y=stat.in.ig$mean-stat.in.ig$true, x = stat.in.ig$true) #Correlation of brain age delta and true age 
+```
+This shows underestimation for higher age and overestimatikon for lower age
+
+```{r}
+plot(y=stat.out.ig$mean, x = stat.out.ig$true, ylab="Mean Predicted age (years)", xlab = "Synthetic response (years)", main = "Synthetic response against SGLD")
+abline(a=0,b=1,lwd=2,col="red")
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)  
+```
+correlation
+```{r}
+cor(y=stat.out.ig$mean-stat.out.ig$true, x = stat.out.ig$true) #Correlation of brain age delta and true age 
+```
+This shows underestimation for higher age and overestimatikon for lower age
+
+#7 July
+##Assessing how initial randomisation affect the importance of regions/bias
+
+###SGD 
+```{r}
+for(i in c(10,3,4,9,20)){
+  bias <- as.vector(unlist(read.csv(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_bias__jobid_',i,'.csv'))))
+  print(paste0('Max: ', max(bias),', Min: ', min(bias), ', Inactive: '))
+  print(which(bias==0))
+}
+```
+Appears at random
+
+###SGD_long
+```{r}
+for(i in c(2,7,8)){
+  bias <- as.vector(unlist(read.csv(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/sim_j29_nnvwb4_bias__jobid_',i,'.csv'))))
+  print(paste0('Max: ', max(bias),', Min: ', min(bias), ', Inactive: '))
+  print(which(bias==0))
+}
+```
+Also appears random
+
+###SGLD_IG
+```{r}
+for(i in c(1,3,5,12)){
+  bias <- as.vector(unlist(read.csv(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju3_nnvwbsgldig_bias__jobid_',i,'.csv'))))
+  print(paste0('Max: ', max(bias),', Min: ', min(bias), ', Inactive: '))
+  print(which(bias==0))
+}
+```
+Tends to be 0 inactive regions
+
 
