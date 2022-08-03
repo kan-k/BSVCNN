@@ -6440,6 +6440,65 @@ for(i in c(10,3,4,9,20)){
 ```
 Appears at random
 
+Look at the theta/basis or weights of the NN... but in fact theta is allowed to adapt over time evven without loss, this is from the l2 regularisa5tion (weight decay)... perhaps look at initialisation of seed 4, but then to get the exact same answer... hm
+Perhaps look at theta
+```{r}
+# write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_weights_',"_jobid_",4,'.feather'))
+nn.theta<- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_theta_',"_jobid_",4,'.feather')))
+summary(t(nn.theta)[])
+```
+
+Look at results
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",3,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",20,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]))
+
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","bias=0|5 silent", "bias=0|3 silent", "bias=0|3 silent","bias=0|4 silent","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, 7.1),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:4),1,1),col=c("white",1,3,4,5,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(#min(full.res[2,,],na.rm = TRUE)
+                                                     4, max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Test RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:4),1,1),col=c("white",1,3,4,5,6,2))
+```
+
 ###SGD_long
 ```{r}
 for(i in c(2,7,8)){
@@ -6460,4 +6519,1384 @@ for(i in c(1,3,5,12)){
 ```
 Tends to be 0 inactive regions
 
+
+
+#11 July
+
+Some notes for what to do
+1. Include a range of different initial prior variance for sgd (previously done)
+2. Assess the effects of hyperpriors and systematically compare it to doing gridsearch THIS IS FOR SGD 
+2.1 Contrast the hyperpriors with empirical updates
+3. Assess different parameterisation of GP (currently done via gridsearch)
+4. Average across runs to assess different initial conditions? To assess non-identifiability
+5. Re do the real-data comparison
+6.ACTUALLY do  different number of injected noise in LD, and see if fitted MSE is the same, but the personal variance is different.
+7. Contrast inverse gamma hyperprior and half cauchy hyperprior
+8. Contrast 
+
+#14 July
+##Bias
+Look at `nnvwb6` for initialising bias to be 0.01
+###SGD 
+```{r}
+for(i in c(10,2,3,4,7)){
+  bias <- as.vector(unlist(read.csv(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju12_nnvwb4_bias__jobid_',i,'.csv'))))
+  print(paste0('Max: ', max(bias),', Min: ', min(bias), ', Inactive: '))
+  print(which(bias==0.01)) ##0.01
+}
+```
+####Look at the result
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju12_nnvwb4_loss__jobid_",2,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju12_nnvwb4_loss__jobid_",7,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju12_nnvwb4_loss__jobid_",10,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+
+
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]))
+
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","bias=0|5 silent", "bias=0.1|3 silent", "bias=0.1|4 silent","bias=0.1|6 silent","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, 7.1),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:4),1,1),col=c("white",1,3,4,5,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(#min(full.res[2,,],na.rm = TRUE)
+                                                     4, max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Test RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:4),1,1),col=c("white",1,3,4,5,6,2))
+```
+
+##personal variance
+Look at magnitude of individual variance.
+```{r}
+summary(stat.in.ig$sd^2)
+summary(stat.out.ig$sd^2)
+```
+
+
+#15 July
+
+##Changing hyperprior params
+Changing inverse gamma distribution  from (3,0.5) to (1,1) ACTUALLY this become negligible from the updates 
+
+job 5,15,20 survived
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",10,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju3_nnvwbsgldig_loss__jobid_",12,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju14_nnvwbsgldig_loss__jobid_",20,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","SGD", "SGLD-IG(3,0.5)", "SGLD-IG(1,1)","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, 7.1),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+
+legend('topright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(#min(full.res[2,,],na.rm = TRUE)
+                                                     4, max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Test RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+```
+This shows that even though the initial distribution looks very different, it will eventually be the same from the conjugate updates
+
+
+##Point 2 from the goal
+Assess the effects of hyperpriors and systematically compare it to doing gridsearch THIS IS FOR SGD
+
+So for inverse gamma I have `nnvwbig3_initvarlR` which completes jib8,9, 11,16,17 and corresponds to var = `0.1,0,5,0.5,1,10`
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",17,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","1","10","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 5,pch=3,col = 7,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 4,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 5,pch=3,col = 7,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:5),1,1),col=c("white",1,3,4,5,7,6,2))
+```
+
+
+#16 July
+##Point 2 initial variance assessment
+Assess different static SGD initial variance`nnvwb7_initvar.R`
+successful run: `1,3,5,6,7,8,12,13,14,16,17`
+```{r}
+prior.var.mat[c(1,3,5,6,7,8,12,13,14,16,17),2]
+```
+want 8,12,16,17
+
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",17,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","1","10","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 5,pch=3,col = 7,lwd=1)
+legend('bottomright',legend = leglab,lty=c(1,c(1:3),1,1),col=c("white",1,3,4,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 4,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 5,pch=3,col = 7,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:5),1,1),col=c("white",1,3,4,5,7,6,2))
+```
+
+##Compare SGD with and without hyperprior
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",17,".csv")))
+#hyperprior
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.9 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",17,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]),sqrt(res.nn.loss.sgd.9[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]),sqrt(res.nn.loss.sgd.9[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","1","10","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 3,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 4,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 5,lwd=1)
+lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 3,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 4,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 5,lwd=.2)
+lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+#18 July
+
+Tom suggests doing the predictive interval plot without personal variance
+
+####For IG insample
+in-sample statistics
+```{r}
+stat.in.ig$modmse <- sqrt(in.mse)
+```
+
+95% prediction interval
+```{r}
+stat.in.ig$lwrmodmse <- stat.in.ig$mean - qt(0.975,400-1)*stat.in.ig$modmse
+stat.in.ig$uprmodmse <- stat.in.ig$mean + qt(0.975,400-1)*stat.in.ig$modmse
+```
+
+#####Define proportion counting
+```{r}
+#Prediction
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,sum(between(p.in.ig$pred[p.in.ig$id==stat.in.ig$id[i]],stat.in.ig$lwrmodmse[i],stat.in.ig$uprmodmse[i]))/400*100)
+}
+stat.in.ig$within.predmodmse <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,(between(stat.in.ig$true[i],stat.in.ig$lwrmodmse[i],stat.in.ig$uprmodmse[i])))
+}
+stat.in.ig$true.covermodmse <- within.pred
+```
+Plot of predictions
+```{r}
+print(paste0('Proprtion of subject within 95%: ',sum(stat.in.ig$within.predmodmse>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.in.ig$true.covermodmse)/2000*100))
+
+```
+
+Plot of true
+```{r}
+no.obs <- 50
+plot(y=stat.in.ig$true[1:no.obs],x=1:no.obs ,main = 'True age and the 95% Prediction Interval',
+     xlab='Subject Number',ylab='Age (years)', pch = 20)
+abline(h=95,col='red',lwd=2)
+points(stat.in.ig$lwrmodmse[1:no.obs],x = 1:no.obs,col='red',pch=15)
+points(stat.in.ig$uprmodmse[1:no.obs],x = 1:no.obs,col='blue',pch=15 )
+abline(v=(1:no.obs)*stat.in.ig$true.covermodmse[1:no.obs],lty=2,col='darkgreen',lwd=1)
+abline(v=(1:no.obs)*(1-stat.in.ig$true.covermodmse[1:no.obs]),lty=2,col='grey',lwd=0.5)
+abline(v=0,col='white',lwd=3)
+```
+
+
+####For IG Out-of-sample
+```{r}
+stat.out.ig$modmsemse <- sqrt(in.mse)
+```
+
+Use prediction interval from https://en.wikipedia.org/wiki/Prediction_interval for the case of unknown mean and unknown variance
+Note that n=1600 and the dof=399 for T dist, the dof is large enough to make it look like a normal dist
+
+95% prediction interval
+```{r}
+stat.out.ig$lwrmodmse <- stat.out.ig$mean - qt(0.975,1600-1)*stat.out.ig$modmse
+stat.out.ig$uprmodmse <- stat.out.ig$mean + qt(0.975,1600-1)*stat.out.ig$modmse
+```
+
+#####Define proportion counting
+```{r}
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,sum(between(p.out.ig$pred[p.out.ig$id==stat.out.ig$id[i]],stat.out.ig$lwrmodmse[i],stat.out.ig$uprmodmse[i]))/1600*100)
+}
+stat.out.ig$within.predmodmse <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,(between(stat.out.ig$true[i],stat.out.ig$lwrmodmse[i],stat.out.ig$uprmodmse[i])))
+}
+stat.out.ig$true.covermodmse <- within.pred
+```
+Plot
+
+```{r}
+print(paste0('Proprtion of subject within 95%: ',sum(stat.out.ig$within.predmodmse>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.out.ig$true.covermodmse)/2000*100))
+```
+```{r}
+no.obs <- 50
+plot(y=stat.out.ig$true[1:no.obs],x=1:no.obs ,main = 'True age and the 95% Prediction Interval',
+     xlab='Subject Number',ylab='Age (years)', pch = 20)
+abline(h=95,col='red',lwd=2)
+points(stat.out.ig$lwrmodmse[1:no.obs],x = 1:no.obs,col='red',pch=15)
+points(stat.out.ig$uprmodmse[1:no.obs],x = 1:no.obs,col='blue',pch=15 )
+
+abline(v=(1:no.obs)*stat.out.ig$true.covermodmse[1:no.obs],lty=2,col='darkgreen',lwd=1)
+abline(v=(1:no.obs)*(1-stat.out.ig$true.covermodmse[1:no.obs]),lty=2,col='grey',lwd=0.5)
+abline(v=0,col='white',lwd=3)
+```
+RMSE and Rsq
+
+```{r}
+print(paste0('in RMSE: ',sqrt(mean((stat.in.ig$mean-stat.in.ig$true)^2))))
+print(paste0('out RMSE: ',sqrt(mean((stat.out.ig$mean-stat.out.ig$true)^2))))
+print(paste0('True noise: 4.58'))
+```
+
+
+#20 July
+
+##Low init variance
+Look at jobs done
+```{r}
+prior.var.mat <- expand.grid(1:10,c(0.001,0.01))
+prior.var.mat[c(1,16,20,10,13,16,9),2]
+```
+
+
+Compare method
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwb4_lowinitvar_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwb4_lowinitvar_loss__jobid_",1,".csv")))
+#hyperprior
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwbig_lowinitvar_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.9 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwbig_lowinitvar_loss__jobid_",9,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]),sqrt(res.nn.loss.sgd.9[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]),sqrt(res.nn.loss.sgd.9[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","0.01","0.001","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 3,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 4,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 5,lwd=1)
+lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 3,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 4,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 5,lwd=.2)
+lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+
+#23 July
+
+##Assess Empirical bayes variance
+```{r}
+prior.var.mat <- expand.grid(1:25,c(0.001,0.01,0.1,0.5))
+prior.var.mat[c(11,27,52,79),2]
+```
+11,27,52,79 corresponds to 0.001,0.01,0.1,0.5
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbbayes_initvar_loss__jobid_",52,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbbayes_initvar_loss__jobid_",79,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbbayes_initvar_loss__jobid_",27,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbbayes_initvar_loss__jobid_",11,".csv")))
+#hyperprior
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwbig_lowinitvar_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.9 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwbig_lowinitvar_loss__jobid_",9,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]),sqrt(res.nn.loss.sgd.9[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]),sqrt(res.nn.loss.sgd.9[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","0.01","0.001","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 3,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 4,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 5,lwd=1)
+lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=3)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=3)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 3,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 4,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 5,lwd=.2)
+lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+###Assess the end variance of theta
+```{r}
+ theta.sd.mat <- matrix(,ncol=12,nrow = 4)
+ counter <- 1
+ for(i in c(11,27,52,79)){
+   theta.sgd <- as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbbayes_initvar_theta_","_jobid_",i,".feather")))
+   theta.sd.mat[counter,] <- apply(theta.sgd, 1, var)
+   counter <- counter+1
+ }
+
+ plot(theta.sd.mat[1,], ylim = c(0,7), type = "o", lty = 1,pch=1, ylab="var", main = "Region-wise var after 240 iterations", xlab='Region number')
+ lines(theta.sd.mat[2,], type = "o", lty = 2,pch=2,col = 3)
+ lines(theta.sd.mat[3,], type = "o", lty = 2,pch=2,col = 4)
+ lines(theta.sd.mat[4,], type = "o", lty = 2,pch=2,col = 5)
+
+ abline(h=0.1,lty=1,col='grey')
+ abline(h=0.5,lty=1,col='grey')
+ abline(h=0.01,lty=1,col='grey')
+ abline(h=0.001,lty=1,col='grey')
+ legend('topright',legend = c(expression(tau^2),as.character(c(0.001,0.01,0.1,0.5))),lty=c(1,1,2,2,2), pch = c(1,1,2,2,2),col=c("white",1,3:5))
+```
+I have just noticed that for the above, the learning rate was set to be 0.6, hence the fast learning at the beginning
+
+##Assess IG updates with IG-random initial value
+Only jobid (15,17,20)
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwb4_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwb4_lowinitvar_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwb4_lowinitvar_loss__jobid_",1,".csv")))
+#hyperprior
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbig_raninitvar_loss__jobid_",15,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbig_raninitvar_loss__jobid_",17,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju20_nnvwbig_raninitvar_loss__jobid_",20,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","0.01","0.001","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 8,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 9,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 10,lwd=1)
+# lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 8,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 9,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 10,lwd=.2)
+# lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+Actually not bad
+
+
+#24 July
+##Assess Empirical bayes variance
+```{r}
+prior.var.mat <- expand.grid(1:25,c(0.001,0.01,0.1,0.5))
+prior.var.mat[c(10,26,53,77),2]
+```
+11,27,52,79 corresponds to 0.001,0.01,0.1,0.5
+53,77
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",62,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",89,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",26,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",10,".csv")))
+#hyperprior
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju15_nnvwbig_loss__jobid_",9,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwbig_lowinitvar_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.9 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju18_nnvwbig_lowinitvar_loss__jobid_",9,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]),sqrt(res.nn.loss.sgd.9[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]),sqrt(res.nn.loss.sgd.9[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "0.1", "0.5","0.01","0.001","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 3,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 4,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 5,lwd=1)
+lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=3)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=3)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 3,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 4,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 5,lwd=.2)
+lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+For empirical bayes, 0.1 and 0.5 seem to have faster convergence than inverse gamma (it's all by chance).
+
+
+
+#25 July
+
+##Observe different distribution of invgamma
+```{r}
+install.packages("invgamma")
+library(invgamma)
+```
+
+```{r}
+plot(density(rinvgamma(n=100000,shape=3,rate=0.5)), ylab = "p(x)", main = "Densities of IG distributions", xlim = c(0,15))
+lines(density(rinvgamma(n=100000,shape=1,rate=0.5)),col='red')
+```
+```{r}
+x.temp <- rinvgamma(n=100000,shape=1,rate=1)
+x.temp.norm <- (x.temp - mean(x.temp))/sd(x.temp)
+plot(density(x.temp.norm), xlim = c(0,5))
+# plot(density(rinvgamma(n=1000000,shape=1,rate=1)),xlim=c(0,1000))
+```
+```{r}
+plot(x=seq(0.001,5, by = 0.002),dinvgamma(x= seq(0.001,5, by = 0.002),1,0.5),type='l')
+```
+Plot via density `dinvgamma`
+```{r}
+plot(x=seq(0.001,5, by = 0.002),dinvgamma(x= seq(0.001,5, by = 0.002),3,0.5), ylab = "p(x)", main = "Densities of IG distributions",type='l',col='red',xlab='x')
+lines(x=seq(0.001,5, by = 0.002),dinvgamma(x= seq(0.001,5, by = 0.002),1,0.5),col='blue')
+legend('topright',legend = c(paste0("IG(3,0.5)")
+                             ,paste0("IG(1,0.5)")),lty=c(1),col=c("red",'blue'))
+```
+
+
+```{r}
+plot(density(runif(100000,min=50,max=100)))
+```
+
+Shape determines the "peakiness', the lower, the more towards uniform
+Rate determines location of peak
+
+##Assess stability
+
+###Peak Gamma, a = 3, beta = 0.5
+
+```{r}
+runs <- c(10,12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_",i,".csv")))
+    
+}
+```
+
+/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_10.csv
+12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9
+
+```{r}
+# library(ggplot2)
+# set.seed(47)
+ggplot(tibble::tibble(x = rep(1:800,19), 
+                       y = sqrt(c(t(res.mat[2,,]))))
+                      # y= rnorm(20)*x)
+                      , aes(x, y)) +
+geom_point(alpha = 0.1) +
+geom_smooth(fill = 'darkblue') +
+geom_smooth(stat = 'summary', color = 'red', fill = 'red', alpha = 0.2,
+            fun.data = median_hilow, fun.args = list(conf.int = 0.5))
+
+```
+
+Plot using normal plot
+Finding IQR
+```{r}
+runs <- c(10,12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_",i,".csv")))
+}
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = rep(1:800,19), y = sqrt(c(t(res.mat[2,,]))))
+lines(x=1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = rep(1:800,19), y = sqrt(c(t(res.mat[1,,]))))
+lines(x=1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+```
+Plot without datapoints
+```{r}
+runs <- c(10,12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_",i,".csv")))
+}
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = 1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2, type = 'l',main = paste0("Test RMSE, (n = ",length(runs), ")"))
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2, type = 'l',
+     main = paste0("Train RMSE, (n = ",length(runs), ")"))
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+```
+
+
+###Peak Gamma, a = 1, beta = 0.5
+
+```{r}
+runs <- c(11,13,14,2,20,24,26,28,29,30,31,36,40,41,43,5,6,8)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_unfran_loss__jobid_",i,".csv")))
+}
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = rep(1:800,length(runs)), y = sqrt(c(t(res.mat[2,,]))))
+lines(x=1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = rep(1:800,length(runs)), y = sqrt(c(t(res.mat[1,,]))))
+lines(x=1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+```
+```{r}
+runs <- c(11,13,14,2,20,24,26,28,29,30,31,36,40,41,43,5,6,8)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_unfran_loss__jobid_",i,".csv")))
+}
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = 1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2, type = 'l',main = paste0("Test RMSE, (n = ",length(runs), ")"))
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='blue',lwd=2, type = 'l',main = paste0("Train RMSE, (n = ",length(runs), ")"))
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='red',lwd=2)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='red',lwd=2)
+```
+
+###Put everything into one graph
+```{r}
+runs <- c(10,12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_",i,".csv")))
+}
+
+runs2 <- c(11,13,14,2,20,24,26,28,29,30,31,36,40,41,43,5,6,8)
+res.mat2 <- array(,dim=c(2,length(runs2),800))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_unfran_loss__jobid_",i,".csv")))
+}
+
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = 1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=1)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=1)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+legend('topright',legend = c(paste0("IG(3,0.5)",", n=",length(runs))
+                             ,paste0("IG(1,0.5)",", n=",length(runs2))),lty=c(1),col=c("red",'blue'))
+
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=1)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=1)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+legend('topright',legend = c(paste0("IG(3,0.5)",", n=",length(runs))
+                             ,paste0("IG(1,0.5)",", n=",length(runs2))),lty=c(1),col=c("red",'blue'))
+```
+
+##Stability of empirical bayes
+```{r}
+prior.var.mat <- expand.grid(1:25,c(0.001,0.01,0.1,0.5))
+```
+
+```{r}
+runs <- c(10,14,15,17,18,2,4)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+
+runs2 <- c(53,55,57,59,62,63,71,73,77,78,81,89,90,94)
+res.mat2 <- array(,dim=c(2,length(runs2),800))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x = 1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=1)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=1)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2) 
+legend('topright',legend = c(paste0("EB-0.001",", n=",length(runs))
+                             ,paste0("EB-0.1",", n=",length(runs2))),lty=c(1),col=c("red",'blue'))
+
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=1)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=1)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=1)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+legend('topright',legend = c(paste0("EB-0.001",", n=",length(runs))
+                             ,paste0("EB-0.1",", n=",length(runs2))),lty=c(1),col=c("red",'blue'))
+```
+
+###Put everthing together
+```{r}
+#Emiprical bayes
+runs <- c(10,14,15,17,18,2,4)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+runs2 <- c(53,55,57,59,62,63,71,73,77,78,81,89,90,94)
+res.mat2 <- array(,dim=c(2,length(runs2),800))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju24_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+#IG
+runs3 <- c(10,12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9)
+res.mat3 <- array(,dim=c(2,length(runs3),800))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_",i,".csv")))
+}
+runs4 <- c(11,13,14,2,20,24,26,28,29,30,31,36,40,41,43,5,6,8)
+res.mat4 <- array(,dim=c(2,length(runs4),800))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_unfran_loss__jobid_",i,".csv")))
+}
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)  
+legend('topright',legend = c(paste0("EB-0.001",", n=",length(runs))
+                             ,paste0("EB-0.1",", n=",length(runs2))
+                             ,paste0("IG(3,0.5)",", n=",length(runs3))
+                             ,paste0("IG(1,0.5)",", n=",length(runs4))),lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:800,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = c(paste0("EB-0.001",", n=",length(runs))
+                             ,paste0("EB-0.1",", n=",length(runs2))
+                             ,paste0("IG(3,0.5)",", n=",length(runs3))
+                             ,paste0("IG(1,0.5)",", n=",length(runs4))),lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+
+
+```
+
+
+
+##Assess bias = 50
+```{r}
+for(i in c(11,12,17,18,19,3,4,7)){
+  bias <- as.vector(unlist(read.csv(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwb4_bias50_bias__jobid_',i,'.csv'))))
+  print(paste0('Max: ', max(bias),', Min: ', min(bias), ', Inactive: '))
+  print(which(bias==0))
+}
+```
+All bias is non zero, in fact, it's aroun the initial bias
+Look at results
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwb4_bias50_loss__jobid_",11,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwb4_bias50_loss__jobid_",3,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwb4_bias50_loss__jobid_",4,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwb4_bias50_loss__jobid_",7,".csv")))
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]))
+
+
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","bias=50|0 silent", "bias=50|0 silent", "bias=50|0 silent","bias=50|0 silent","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.9, 7.1),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:4),1,1),col=c("white",1,3,4,5,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(#min(full.res[2,,],na.rm = TRUE)
+                                                     4, max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Test RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 2,pch=2,col = 3,lwd=1)
+lines(full.res[2,5,], type = "l", lty = 3,pch=3,col = 4,lwd=1)
+lines(full.res[2,6,], type = "l", lty = 4,pch=3,col = 5,lwd=1)
+legend('topright',legend = leglab,lty=c(1,c(1:4),1,1),col=c("white",1,3,4,5,6,2))
+```
+
+Despite having extremely high bias, we see that the NN can learn the true noise as well, so silent region has bare impact
+
+
+#27July
+
+Perhaps I should use IG with defind 4th moments, ie alpha > 4
+Plot via density `dinvgamma`
+```{r}
+plot(x=seq(0.001,5, by = 0.002),dinvgamma(x= seq(0.001,5, by = 0.002),5,0.5), ylab = "p(x)", main = "Densities of IG distributions",type='l',col='red',xlab='x')
+lines(x=seq(0.001,5, by = 0.002),dinvgamma(x= seq(0.001,5, by = 0.002),3,0.5),col='blue')
+legend('topright',legend = c(paste0("IG(5,0.5)")
+                             ,paste0("IG(3,0.5)")),lty=c(1),col=c("red",'blue'))
+```
+
+
+
+##First test SGD IG with alpha = 5 and 10
+Then can do SGLD
+```{r}
+#IG with alpha = 5,10 and initialisation with mean
+runs <- c(11,14,15,16,18,19,2,21,24,25,3,33,34,36,37,38,4,40,41,42,43,48,49,6,7,8)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",i,".csv")))
+}
+runs2 <- c(10,11,13,17,18,19,20,21,24,30,33,34,35,39,4,40,42,50,7,8,9)
+res.mat2 <- array(,dim=c(2,length(runs2),800))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a10_loss__jobid_",i,".csv")))
+}
+#IG with random initialisation
+runs3 <- c(10,12,14,15,16,18,20,23,26,27,36,4,42,44,45,50,6,8,9)
+res.mat3 <- array(,dim=c(2,length(runs3),800))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_peakran_loss__jobid_",i,".csv")))
+}
+runs4 <- c(11,13,14,2,20,24,26,28,29,30,31,36,40,41,43,5,6,8)
+res.mat4 <- array(,dim=c(2,length(runs4),800))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju25_nnvwbig_unfran_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("IG(5,0.5)",", n=",length(runs))
+                             ,paste0("IG(10,0.5)",", n=",length(runs2))
+                             ,paste0("IG(3,0.5)",", n=",length(runs3))
+                             ,paste0("IG(1,0.5)",", n=",length(runs4)))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)  
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration")
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:800,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+
+Maybe will use result from IG(5,0.5) as it has the same test RMSE as IG(10,0.5) but parameter isn't as extreme
+##Select a run from IG(5,0.5)
+c(11,14,15,16,18,19,2,21,24,25,3,33,34,36,37,38,4,40,41,42,43,48,49,6,7,8)
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",16,".csv")))
+
+#IG with alpha = 5,10 and initialisation with mean
+runs <- c(11,14,15,16,18,19,2,21,24,25,3,33,34,36,37,38,4,40,41,42,43,48,49,6,7,8)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",i,".csv")))
+}
+runs2 <- c(10,11,13,17,18,19,20,21,24,30,33,34,35,39,4,40,42,50,7,8,9)
+res.mat2 <- array(,dim=c(2,length(runs2),800))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a10_loss__jobid_",i,".csv")))
+}
+
+
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",6,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",7,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",8,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",11,".csv")))
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",14,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",15,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",16,".csv")))
+res.nn.loss.sgd.9 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbig_a5_loss__jobid_",18,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]),sqrt(res.nn.loss.sgd.9[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]),sqrt(res.nn.loss.sgd.9[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","GS", "6", "7","8","11","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 3,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 4,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 5,lwd=1)
+lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=3)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=3)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 3,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 4,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 5,lwd=.2)
+lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+Pick run 8
+
+##Plot SG+LD
+
+corresponding lr and noise: 11,13,16,29,35,36,37
+previous lr and noise: 21,29,3,34,49,6,7
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n16_nnvwb4_loss__jobid_",16,".csv")))
+
+#Load many runs of LD:
+runs <- c(11,13,16,29,35,36,37)
+res.mat <- array(,dim=c(2,length(runs),1600))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbsgldig_lowlr_loss__jobid_",i,".csv")))
+}
+runs2 <- c(21,29,3,34,49,6,7)
+res.mat2 <- array(,dim=c(2,length(runs2),1600))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_ju27_nnvwbsgldig_norlr_loss__jobid_",i,".csv")))
+}
+
+res.iqr.train <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+res.iqr2.train <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+
+res.iqr.test <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+res.iqr2.test <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+
+
+
+#Corresponding lr:
+res.nn.loss.sgd.2 <- res.iqr[2,]
+
+res.nn.loss.sgd.2 <- rbind(res.iqr.train[2,],res.iqr.test[2,])
+res.nn.loss.sgd.3 <- rbind(res.iqr.train[1,],res.iqr.test[1,])
+res.nn.loss.sgd.4 <- rbind(res.iqr.train[3,],res.iqr.test[3,])
+#Previous lr and noise:
+res.nn.loss.sgd.5 <- rbind(res.iqr2.train[2,],res.iqr2.test[2,])
+res.nn.loss.sgd.6 <- rbind(res.iqr2.train[1,],res.iqr2.test[1,])
+res.nn.loss.sgd.7 <- rbind(res.iqr2.train[3,],res.iqr2.test[3,])
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])),
+                       c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.4[2,])),
+                       c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.5[2,])),
+                       c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.6[2,])),
+                       c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.7[2,])))
+
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.4[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.5[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.6[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.7[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","SGD", "SGLDcorNoise","SGLD_prev noise","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,col = 1,lwd=2)
+lines(full.res[1,4,], type = "l", lty = 1,col = 'red',lwd=2)
+lines(full.res[1,5,], type = "l", lty = 1,col = 'pink',lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,col = 'pink',lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,col = 'blue',lwd=2)
+lines(full.res[1,8,], type = "l", lty = 1,col = 'lightblue',lwd=1)
+lines(full.res[1,9,], type = "l", lty = 1,col = 'lightblue',lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,"red","blue",6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Test RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,col = 1,lwd=2)
+lines(full.res[2,4,], type = "l", lty = 1,col = 'red',lwd=2)
+lines(full.res[2,5,], type = "l", lty = 1,col = 'pink',lwd=1)
+lines(full.res[2,6,], type = "l", lty = 1,col = 'pink',lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,col = 'blue',lwd=2)
+lines(full.res[2,8,], type = "l", lty = 1,col = 'lightblue',lwd=1)
+lines(full.res[2,9,], type = "l", lty = 1,col = 'lightblue',lwd=1)
+legend('top',legend = leglab,lty=c(1),col=c("white",1,"red","blue",6,2))
+```
 
