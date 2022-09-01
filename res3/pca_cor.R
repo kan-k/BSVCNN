@@ -41,9 +41,9 @@ num.sel.pc <- which(pca.train.sum$importance[3,]>0.90)[1]
 pca.train.sc <- pca.train$x[,1:num.sel.pc]
 
 print("Computing pair-wise correlation")
-pair.wise.cor <- cor(res3.dat,pca.train.sc)
-max.cor <- apply(pair.wise.cor, 1, max)
-max.cor.abs <- apply(abs(pair.wise.cor),1,max)
+pair.wise.cor <- cor(res3.dat,pca.train.sc) #This is a p x #pc matrix
+max.cor <- apply(pair.wise.cor, 1, max) 
+max.cor.abs <- apply(abs(pair.wise.cor),1,max) #for each row p, take highest cor to pc
 
 gp.mask.hs <- res3.mask
 gp.mask.hs[gp.mask.hs!=0] <- c(max.cor)

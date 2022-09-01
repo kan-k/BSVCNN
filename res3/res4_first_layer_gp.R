@@ -13,7 +13,7 @@ p_load(truncnorm)
 
 #First layer, compute 12 gps, mask already have loaded mask/mask.reg AND have mask_ROI ready to load
 dimension = 3
-deg_vec<- c(5)
+deg_vec<- c(6)
 a_vec  <- c(1,2,3,4,5)
 b_vec  <- c(30,40,50,60,70,80,90,100)
 param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
@@ -67,7 +67,7 @@ for(i in res3.mask.reg){
   nb.full$maskcoords[,3] <- nb.full$maskcoords[,3]/z.scaler
   
   #get psi for Region 1
-  poly_degree = 10
+  poly_degree =6
   a_concentration = param_grid[gs.opt[which(1==(res3.mask.reg)),1],2]
   b_smoothness = param_grid[gs.opt[which(1==(res3.mask.reg)),1],3]
   psi.mat.nb <- GP.eigen.funcs.fast(nb.full$maskcoords, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
@@ -79,7 +79,7 @@ for(i in res3.mask.reg){
   bases.nb.to.use <- t(as.matrix(bases.nb))
   #Get psi for other regions  
   for(m in setdiff(res3.mask.reg,1)){
-    poly_degree = 10
+    poly_degree = 6
     a_concentration = param_grid[gs.opt[which(m==(res3.mask.reg)),1],2]
     b_smoothness = param_grid[gs.opt[which(m==(res3.mask.reg)),1],3]
     psi.mat.nb <- GP.eigen.funcs.fast(nb.full$maskcoords, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)

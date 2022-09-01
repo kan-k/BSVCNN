@@ -1,5 +1,9 @@
 # R script
 
+#11 Aug, all gpnn failed due to nonidentifiability maybe due to integer response, change from lr = 0.01 to lr 0.6, number of epoch to 70
+#On 10 Aug nn.sh.o74470152.16 shows that 13 hours of training.... with lr = 0.01, epoch = 70, alg coverges to training mse of 20 after 120 epochs... only one survived
+
+
 #IG alpha = 5, and use mean for initialisation
 #With this, expectation is 0.1
 
@@ -109,10 +113,10 @@ batch_size <- 500
 
 #NN parameters
 it.num <- 1
-learning_rate <- 0.01 #for slow decay starting less than 1
+learning_rate <- 0.6 #for slow decay starting less than 1
 
 
-epoch <- 200
+epoch <- 70
 
 #Initial parameters for inverse gamma
 alpha.init <- rep(6,n.mask) #shape
@@ -248,7 +252,7 @@ for(e in 1:epoch){
     conj.cv[,it.num] <- C2
     
     it.num <- it.num +1
-    learning_rate <- 0.01
+    learning_rate <- 0.6
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
@@ -259,21 +263,21 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL
 colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_inpred_',"_jobid_",JobId,'.feather'))
+write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_inpred_',"_jobid_",JobId,'.feather'))
 temp.frame <- as.data.frame(rbind(pred.test.ind,pred.test.val))
 colnames(temp.frame) <- NULL
 colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_outpred_',"_jobid_",JobId,'.feather'))
+write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_outpred_',"_jobid_",JobId,'.feather'))
 #inv gamme param
-write.csv(conj.alpha,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_alpha_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.beta,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_beta_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.invgamma,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_invgam_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.cv,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwbig_a6_Cv_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.alpha,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_alpha_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.beta,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_beta_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.invgamma,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_invgam_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.cv,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_Cv_',"_jobid_",JobId,".csv"), row.names = FALSE)

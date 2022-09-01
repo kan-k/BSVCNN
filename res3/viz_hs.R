@@ -7,13 +7,14 @@ p_load(neurobase)
 p_load(feather)
 p_load(glmnet)
 p_load(fastBayesReg)
+p_load(dplyr)
 ##3 Dec with white matter, stem removed and thresholded
 
 
 print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
-dat_allmat<-as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather'))
+dat_allmat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather'))
 
 part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
 part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
@@ -72,17 +73,28 @@ print("stage 3")
 
 num_part<- 2000
 num_test<- 2000
-set.seed(JobId)
+set.seed(4)
 ind.to.use <- get_ind(num_part,num_test)
+
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
+ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+ind.to.use$train <- unlist(ind.temp[1,])
+
+set.seed(NULL)
 print("=====")
 print("==========")
 print("fitting hs")
-lassofit <- fast_horseshoe_lm(X = cbind(1,as.matrix(dat_allmat[ind.to.use$train,])) ,y = age_tab$age[ind.to.use$train])
-pred_prior<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$train, ])))$mean
-pred_prior_new<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$test, ])))$mean
-print(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test))
-write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/hs_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/outpred_hs_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/inpred_hs_noscale_",JobId,".csv"), row.names = FALSE)
+time.train <-  Sys.time()
+lassofit <- fast_horseshoe_lm(X = cbind(1,as.matrix(dat_allmat[ind.to.use$train,])) ,y = age_tab$age[ind.to.use$train],mcmc_sample = 400L) #Change smaples to 400
+time.taken <- Sys.time() - time.train
+cat("Training complete in: ", time.taken)
 
+gp.mask.hs <- mask_subcor
+
+gp.mask.hs[gp.mask.hs!=0] <-abs(lassofit$post_mean$betacoef[-1])
+
+gp.mask.hs@datatype = 16
+gp.mask.hs@bitpix = 32
+
+writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/hs_',JobId))

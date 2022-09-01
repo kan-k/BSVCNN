@@ -30,7 +30,7 @@ coord.centroid <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res
 
 #Get partial GP
 #param:
-poly_degree = 7
+poly_degree = 10
 a_concentration = 0.5
 b_smoothness = 40
 dimension = 3

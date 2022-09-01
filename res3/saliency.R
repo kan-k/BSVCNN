@@ -1,10 +1,8 @@
 # R script
 
-#11 Aug, all gpnn failed due to nonidentifiability maybe due to integer response, change from lr = 0.01 to lr 0.6, number of epoch to 70
-
-#Initialisaing with Half cauchy (0,1) and use Horseshoe update
-#Use IG(5,0.5) as prior
-
+## Increase num epoch to 200
+## AND
+## Reduce lr to 0.05
 
 #SGD with 12 x 12 GP
 
@@ -18,14 +16,12 @@ p_load(feather)
 p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
-p_load(nimble)
-p_load(extraDistr)
 
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-# prior.var.vec <- c(0.1,0.5)
-# prior.var.mat <- expand.grid(2:21,prior.var.vec)
+prior.var.vec <- c(0.1,0.5)
+prior.var.mat <- expand.grid(2:21,prior.var.vec)
 
 start.time <- Sys.time()
 #1 Split data into mini batches (train and validation)
@@ -63,12 +59,6 @@ mse <- function(pred, true){mean((pred-true)^2)}
 loss.train <- vector(mode = "numeric")
 loss.val <- vector(mode = "numeric")
 
-#Predictions
-pred.train.ind <- vector(mode = "numeric")
-pred.train.val <- vector(mode = "numeric")
-pred.test.ind <- vector(mode = "numeric")
-pred.test.val <- vector(mode = "numeric")
-
 print("Loading data")
 
 #Load data and mask and GP 
@@ -98,7 +88,6 @@ train.test.ind$train <-  unlist(ind.temp[1,])
 source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp4.R")
 partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
 
-
 #Length
 
 
@@ -109,7 +98,13 @@ cat("Loading data complete in: ", time.taken)
 print("Getting mini batch")
 #Get minibatch index 
 batch_size <- 500
-
+# seed <- prior.var.mat[JobId,1]
+# set.seed(seed)
+# train.test.ind <- train_test_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000)
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
+train.test.ind <- list()
+train.test.ind$test <- unlist(ind.temp[2,])
+train.test.ind$train <- unlist(ind.temp[1,])
 
 #NN parameters
 it.num <- 1
@@ -118,18 +113,9 @@ learning_rate <- 0.6 #for slow decay starting less than 1
 
 epoch <- 70
 #Fix prior var to be 0.1
-prior_var <- rhcauchy(n.mask, sigma = 1)^2
+prior_var <- 0.1
 C2 <- 1/(2*prior_var)
 
-#Initial parameters for inverse gamma
-alpha.init <- rep(5,n.mask) #shape
-beta.init <- rep(0.5,n.mask) #scale
-xi <-  vector(mode = "numeric", length = n.mask)
-#Storing inv gamma
-conj.alpha <- matrix(, nrow=n.mask,ncol=epoch*4)
-conj.beta <- matrix(, nrow=n.mask,ncol=epoch*4)
-conj.invgamma <-matrix(, nrow=n.mask,ncol=epoch*4)
-conj.cv <- matrix(, nrow=n.mask,ncol=epoch*4)
 
 print("Initialisation")
 #1 Initialisation
@@ -178,8 +164,6 @@ for(e in 1:epoch){
     #Output layer
     hs_in.pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer %*%beta_fit$HS
     loss.train <- c(loss.train, mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]))
-    pred.train.ind <- c(pred.train.ind,mini.batch$train[[b]]) 
-    pred.train.val <- c(pred.train.val,hs_in.pred_SOI)
     
     #Validation
     #Layers
@@ -192,8 +176,7 @@ for(e in 1:epoch){
     #Loss calculation
     hs_pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer.test %*%beta_fit$HS
     loss.val <- c(loss.val, mse(hs_pred_SOI,age[train.test.ind$test]))
-    pred.test.ind <- c(pred.test.ind,train.test.ind$test) 
-    pred.test.val <- c(pred.test.val,hs_pred_SOI)
+    
     
     
     #Update weight
@@ -234,23 +217,6 @@ for(e in 1:epoch){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
     
-    #Update Cv
-    
-    for(i in 1:n.mask){
-      xi[i] <- rinvgamma(n=1,1, 1+1/prior_var[i]) #Changed from scale to rate ##Changed again, turns out "extraDistr has rinvgamma amd it masks nimble and has diff names
-      alpha.shape <- length(theta.matrix[i,])/2
-      beta.scale <- 1/xi[i] + sum(theta.matrix[i,]^2)/2
-      prior_var[i] <- rinvgamma(n = 1, alpha.shape, beta.scale) #Changed from scale to rate
-      
-      conj.alpha[i,it.num] <- alpha.shape
-      conj.beta[i,it.num] <- beta.scale
-      conj.invgamma[i,it.num] <- prior_var[i]
-    }
-    
-    C2 <- 1/(2*prior_var)
-    
-    conj.cv[,it.num] <- C2
-    
     it.num <- it.num +1
     learning_rate <- 0.6
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
@@ -258,26 +224,21 @@ for(e in 1:epoch){
   }
   
   print(paste0("epoch: ",e," out of ",epoch, ", time taken for this epoch: ",Sys.time() -time.epoch))
+  #plot
+  #for subject number
+  if(e %in% c(25,50,70)){
+    salient.mat <- matrix(,nrow=length(train.test.ind$train), ncol = p.dat)
+    for(o in train.test.ind$train){
+      salient.mat[which(o==train.test.ind$train),]<- c(beta_fit$HS %*% (relu.prime(bias+weights%*%res3.dat[o,])*weights))
+    }
+    write_feather(as.data.frame(salient.mat),paste0('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug27_saliencymatrix_seed_',JobId,"_epoch_",e))
+  }
 }
 
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
-
-temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
-colnames(temp.frame) <- NULL
-colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_inpred_',"_jobid_",JobId,'.feather'))
-temp.frame <- as.data.frame(rbind(pred.test.ind,pred.test.val))
-colnames(temp.frame) <- NULL
-colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_outpred_',"_jobid_",JobId,'.feather'))
-#inv gamme param
-write.csv(conj.alpha,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_alpha_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.beta,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_beta_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.invgamma,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_invgam_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.cv,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_Cv_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug27_nnvwb4_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug27_nnvwb4_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug27_nnvwb4_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug27_nnvwb4_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)

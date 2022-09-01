@@ -1,12 +1,15 @@
 # R script
 
-#11 Aug, all gpnn failed due to nonidentifiability maybe due to integer response, change from lr = 0.01 to lr 0.6, number of epoch to 70
+#SGLD with inverse gamma conjugate prior
 
-#Initialisaing with Half cauchy (0,1) and use Horseshoe update
-#Use IG(5,0.5) as prior
+#Change initial value to run #8 of SGD IG(5,0.5)
+#Change to shape = 5, scale = 0.5 
+#Change lr to 0.01^2/2 since my injected noise is sd 0.01
 
+#Fix LR
+#Aftet meeting during brainhack on 17th June
+#I will run SGLD after SGD convergence, using s.d. = lr = 0.01
 
-#SGD with 12 x 12 GP
 
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
@@ -19,13 +22,12 @@ p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
 p_load(nimble)
-p_load(extraDistr)
 
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-# prior.var.vec <- c(0.1,0.5)
-# prior.var.mat <- expand.grid(2:21,prior.var.vec)
+prior.var.vec <- c(0.1,0.5)
+prior.var.mat <- expand.grid(2:21,prior.var.vec)
 
 start.time <- Sys.time()
 #1 Split data into mini batches (train and validation)
@@ -98,7 +100,6 @@ train.test.ind$train <-  unlist(ind.temp[1,])
 source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp4.R")
 partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
 
-
 #Length
 
 
@@ -109,22 +110,30 @@ cat("Loading data complete in: ", time.taken)
 print("Getting mini batch")
 #Get minibatch index 
 batch_size <- 500
-
+# seed <- prior.var.mat[JobId,1]
+# set.seed(seed)
+# train.test.ind <- train_test_split(num_datpoint = n.dat, num_test = 2000, num_train = 2000)
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
+train.test.ind <- list()
+train.test.ind$test <- unlist(ind.temp[2,])
+train.test.ind$train <- unlist(ind.temp[1,])
 
 #NN parameters
-it.num <- 1
-learning_rate <- 0.6 #for slow decay starting less than 1
+it.num <- 0
 
 
-epoch <- 70
-#Fix prior var to be 0.1
-prior_var <- rhcauchy(n.mask, sigma = 1)^2
+theta.matrix <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_theta_',"_jobid_",4,'.feather')))
+
+epoch <- 300
+#Use sample variance from previously-run results
+prior_var <- apply(theta.matrix, 1, var)
 C2 <- 1/(2*prior_var)
+gaus.noise <- matrix(,nrow=n.mask, ncol= n.expan)
 
 #Initial parameters for inverse gamma
-alpha.init <- rep(5,n.mask) #shape
+alpha.init <- rep(6,n.mask) #shape
 beta.init <- rep(0.5,n.mask) #scale
-xi <-  vector(mode = "numeric", length = n.mask)
+
 #Storing inv gamma
 conj.alpha <- matrix(, nrow=n.mask,ncol=epoch*4)
 conj.beta <- matrix(, nrow=n.mask,ncol=epoch*4)
@@ -134,10 +143,10 @@ conj.cv <- matrix(, nrow=n.mask,ncol=epoch*4)
 print("Initialisation")
 #1 Initialisation
 #1.1 Initialise the partial weights around normal dist as a matrix of size (nrow(bases..ie choose...) x number of neurons in 2nd layer ie#regions)
-theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
-for(i in 1:n.mask){
-  theta.matrix[i,] <- rnorm(n.expan,0,sqrt(prior_var))
-}
+# theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
+# for(i in 1:n.mask){
+#   theta.matrix[i,] <- rnorm(n.expan,0,sqrt(prior_var))
+# }
 
 #1.2 Multiply the partial weights to partial GP and use it as the actual weights of size (p x 1)
 #Initialising weights
@@ -145,9 +154,9 @@ weights <- matrix(, ncol = p.dat, nrow = n.mask)
 for(i in res3.mask.reg){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
-#Initialising bias (to 0)
-bias <- rep(0,n.mask)
 
+# Load bias
+bias<- as.vector(unlist(read.csv( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_bias__jobid_4.csv')))
 
 time.train <-  Sys.time()
 
@@ -161,6 +170,15 @@ for(e in 1:epoch){
   time.epoch <-  Sys.time()
   #Start batch
   for(b in 1:num.batch){
+    
+    #specifying lr
+    it.num <- it.num +1
+    learning_rate <- 0.001^2/2 #for slow decay starting less than 1
+    #Specifying gaussian noise
+    for(i in 1:n.mask){
+      gaus.noise[i,] <- rnorm(n.expan,0,0.001)
+    }
+    #
     
     print(paste0("Epoch: ",e, ", batch number: ", b))
     #3 Feed it to next layer
@@ -193,7 +211,7 @@ for(e in 1:epoch){
     hs_pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer.test %*%beta_fit$HS
     loss.val <- c(loss.val, mse(hs_pred_SOI,age[train.test.ind$test]))
     pred.test.ind <- c(pred.test.ind,train.test.ind$test) 
-    pred.test.val <- c(pred.test.val,hs_pred_SOI)
+    pred.test.val <- c(pred.test.val,hs_pred_SOI)    
     
     
     #Update weight
@@ -223,7 +241,7 @@ for(e in 1:epoch){
     
     
     #Update theta matrix
-    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m
+    theta.matrix <- theta.matrix*(1-learning_rate*C2/batch_size) - learning_rate*grad.m - gaus.noise
     #Note that updating weights at the end will be missing the last batch of last epoch
     
     #Update bias
@@ -237,10 +255,10 @@ for(e in 1:epoch){
     #Update Cv
     
     for(i in 1:n.mask){
-      xi[i] <- rinvgamma(n=1,1, 1+1/prior_var[i]) #Changed from scale to rate ##Changed again, turns out "extraDistr has rinvgamma amd it masks nimble and has diff names
-      alpha.shape <- length(theta.matrix[i,])/2
-      beta.scale <- 1/xi[i] + sum(theta.matrix[i,]^2)/2
-      prior_var[i] <- rinvgamma(n = 1, alpha.shape, beta.scale) #Changed from scale to rate
+      alpha.shape <- alpha.init[i] + length(theta.matrix[i,])/2
+      # alpha.shape <- alpha.init[i] # Keep alpha the same
+      beta.scale <- beta.init[i] + sum(theta.matrix[i,]^2)/2
+      prior_var[i] <- rinvgamma(n = 1, alpha.shape, scale = beta.scale)
       
       conj.alpha[i,it.num] <- alpha.shape
       conj.beta[i,it.num] <- beta.scale
@@ -251,8 +269,6 @@ for(e in 1:epoch){
     
     conj.cv[,it.num] <- C2
     
-    it.num <- it.num +1
-    learning_rate <- 0.6
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
@@ -263,21 +279,22 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL
 colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_inpred_',"_jobid_",JobId,'.feather'))
+write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_inpred_',"_jobid_",JobId,'.feather'))
 temp.frame <- as.data.frame(rbind(pred.test.ind,pred.test.val))
 colnames(temp.frame) <- NULL
 colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_outpred_',"_jobid_",JobId,'.feather'))
+write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_outpred_',"_jobid_",JobId,'.feather'))
+
 #inv gamme param
-write.csv(conj.alpha,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_alpha_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.beta,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_beta_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.invgamma,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_invgam_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write.csv(conj.cv,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_Cv_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.alpha,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_alpha_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.beta,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_beta_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.invgamma,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_invgam_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(conj.cv,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_Cv_',"_jobid_",JobId,".csv"), row.names = FALSE)

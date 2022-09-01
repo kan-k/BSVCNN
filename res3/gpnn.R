@@ -1,10 +1,8 @@
 # R script
 
-##Change number of runs to 50
+#11 Aug, all gpnn failed due to nonidentifiability maybe due to integer response, change from lr = 0.01 to lr 0.6, number of epoch to 70
 
-## Increase num epoch to 200
-## AND
-## Reduce lr to 0.01
+##Change number of runs to 50
 
 
 #SGD with 12 x 12 GP
@@ -110,10 +108,10 @@ batch_size <- 500
 
 #NN parameters
 it.num <- 1
-learning_rate <- 0.01 #for slow decay starting less than 1
+learning_rate <- 0.6 #for slow decay starting less than 1
 
 
-epoch <- 200
+epoch <- 70
 #Fix prior var to be 0.1
 prior_var <- 0.1
 C2 <- 1/(2*prior_var)
@@ -223,7 +221,7 @@ for(e in 1:epoch){
     }
     
     it.num <- it.num +1
-    learning_rate <- 0.01
+    learning_rate <- 0.6
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
@@ -234,16 +232,16 @@ for(e in 1:epoch){
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
-write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwb4_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwb4_weights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwb4_theta_',"_jobid_",JobId,'.feather'))
-write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwb4_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_weights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_theta_',"_jobid_",JobId,'.feather'))
+write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL
 colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwb4_inpred_',"_jobid_",JobId,'.feather'))
+write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_inpred_',"_jobid_",JobId,'.feather'))
 temp.frame <- as.data.frame(rbind(pred.test.ind,pred.test.val))
 colnames(temp.frame) <- NULL
 colnames(temp.frame) <- 1:ncol(temp.frame)
-write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug10_nnvwb4_outpred_',"_jobid_",JobId,'.feather'))
+write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_outpred_',"_jobid_",JobId,'.feather'))

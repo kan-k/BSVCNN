@@ -9,6 +9,8 @@ p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
 
+##3 Dec with white matter, stem removed and thresholded
+
 print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
@@ -63,9 +65,9 @@ rsqcal2<-function(old,new,ind.old,ind.new){
   print('Done')
   out=list()
   out$inrsq<-round(1-sserr_ridge/sstot,5)*100
-  out$inmae<-round(median(abs(y-ridge_pred)),4)
+  out$inmae<-round(mean(abs(y-ridge_pred)),4)
   out$outrsq<-round(1-sserr_ridge_new/sstot_new,5)*100
-  out$outmae<-round(median(abs(y_new-ridge_pred_new)),4)
+  out$outmae<-round(mean(abs(y_new-ridge_pred_new)),4)
   out$inrmse <-round(sqrt(mean((y-ridge_pred)^2)),4)
   out$outrmse <-round(sqrt(mean((y_new-ridge_pred_new)^2)),4)
   return(out)
@@ -73,8 +75,7 @@ rsqcal2<-function(old,new,ind.old,ind.new){
 norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
-
-
+time.train <-  Sys.time()
 poly_degree = 10
 a_concentration = 0.5
 b_smoothness = 40
@@ -98,6 +99,12 @@ num_part<- 2000
 num_test<- 2000
 set.seed(4)
 ind.to.use <- get_ind(num_part,num_test)
+set.seed(NULL)
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
+ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+ind.to.use$train <- unlist(ind.temp[1,])
+#Tested.... doing set seed(4) get_ind is the same as loading sim_wb2_index
 
 train_Y <- dat.age[ind.to.use$train]
 train_Z <- z.nb[ind.to.use$train,]
@@ -106,34 +113,44 @@ test_img <- dat_allmat[ind.to.use$test,]
 
 #get beta(v)
 hs_fit_SOI <- fast_horseshoe_lm(train_Y,train_Z)
+time.taken <- Sys.time() - time.train
+cat("Training complete in: ", time.taken)
 nm_fit_SOI <- fast_normal_lm(train_Y,train_Z)
+mfvb_fit_SOI <- fast_mfvb_normal_lm(train_Y,train_Z)
 
 beta_fit <- data.frame(HS = crossprod(bases.nb,hs_fit_SOI$post_mean$betacoef[-1]),
-                       NM = crossprod(bases.nb,nm_fit_SOI$post_mean$betacoef[-1]))
+                       NM = crossprod(bases.nb,nm_fit_SOI$post_mean$betacoef[-1]),
+                       MFVB = crossprod(bases.nb,mfvb_fit_SOI$post_mean$betacoef[-1]))
 
-# mask.reg <- sort(setdiff(unique(c(mask.com)),c(0)))
-# reg.ref <- vector(mode = "integer")
-# for(i in sort(mask.reg)){
-#   mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bsvcnn/pile/combined/fin_mask_ROI_',i))
-#   reg.ref <- c(reg.ref,rep(i, sum(mask.temp!=0)))
-# }
+#in-sample prediction
+hs_in.pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + dat_allmat[ind.to.use$train,] %*%beta_fit$HS
+nm_in.pred_SOI <- nm_fit_SOI$post_mean$betacoef[1] + (dat_allmat[ind.to.use$train,] %*% beta_fit$NM)
+mfvb_in.pred_SOI <- mfvb_fit_SOI$post_mean$betacoef[1] + dat_allmat[ind.to.use$train,] %*%beta_fit$MFVB
 
-gp.mask.hs <- mask.com
-gp.mask.nm <- mask.com
+#out-sample prediction
+hs_pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + test_img %*%beta_fit$HS
+nm_pred_SOI <- nm_fit_SOI$post_mean$betacoef[1] + (test_img %*% beta_fit$NM)
+mfvb_pred_SOI <- mfvb_fit_SOI$post_mean$betacoef[1] + test_img %*%beta_fit$MFVB
 
-gp.mask.hs[gp.mask.hs!=0] <-abs(beta_fit$HS)
-gp.mask.nm[gp.mask.nm!=0] <-beta_fit$NM
-# for(i in sort(mask.reg)){
-#   print(i)
-#   gp.mask.hs[gp.mask.hs==i] <- beta_fit$HS[reg.ref==i]
-#   gp.mask.nm[gp.mask.nm==i] <- beta_fit$NM[reg.ref==i]
-#   
-# }
-gp.mask.hs@datatype = 16
-gp.mask.hs@bitpix = 32
-gp.mask.nm@datatype = 16
-gp.mask.nm@bitpix = 32
+#Get correlation sqr
+pred_R2 <- c(Horseshoe = cor(hs_pred_SOI,test_Y)^2,
+             Normal = cor(nm_pred_SOI,test_Y)^2,
+             MFVB = cor(mfvb_pred_SOI,test_Y)^2)
 
-writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/wb_gp_hs_',poly_degree,a_concentration,b_smoothness))
-# writeNIfTI(gp.mask.nm,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/wb_gp_nm_',poly_degree,a_concentration,b_smoothness))
 
+out.hs <- c(unlist(t(as.matrix(rsqcal2(hs_in.pred_SOI,hs_pred_SOI,ind.to.use$train,ind.to.use$test)))),
+            as.numeric(sub('.*:', '', summary(beta_fit$HS))),
+            sum(abs(beta_fit$HS)>1e-5),
+            pred_R2[1])
+
+out.nm <- c(unlist(t(as.matrix(rsqcal2(nm_in.pred_SOI,nm_pred_SOI,ind.to.use$train,ind.to.use$test)))),
+            as.numeric(sub('.*:', '', summary(beta_fit$NM))),
+            sum(abs(beta_fit$NM)>1e-5),
+            pred_R2[2])
+
+out.mfvb <- c(unlist(t(as.matrix(rsqcal2(mfvb_in.pred_SOI,mfvb_pred_SOI,ind.to.use$train,ind.to.use$test)))),
+              as.numeric(sub('.*:', '', summary(beta_fit$MFVB))),
+              sum(abs(beta_fit$MFVB)>1e-5),
+              pred_R2[3])
+
+write.csv(rbind(out.hs,out.nm,out.mfvb),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_gpr_",JobId,".csv"), row.names = FALSE)
