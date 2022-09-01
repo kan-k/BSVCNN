@@ -8700,8 +8700,9 @@ c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 
 hist.train <- hist(age[wb2.ind.train], breaks = seq(from=35, to=95, by=5))
 hist.test  <- hist(age[wb2.ind.test], breaks = seq(from=35, to=95, by=5))
-plot(hist.train,col=c1,ylim=c(0,600))
+plot(hist.train,col=c1,ylim=c(0,600), main = "Histogram of Age in the datasets", xlab = "Age (years)")
 plot(hist.test, add = TRUE, col = c2)
+legend("topright", pch=15, legend = c("Train set", "Test set"), col = c("lightblue","pink"))
 ```
 plot(x=age[wb2.ind.train]
 
@@ -8717,8 +8718,9 @@ c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 
 hist.train <- hist(wb2.train.pred, breaks = seq(from=35, to=95, by=5))
 hist.test  <- hist(wb2.test.pred, breaks = seq(from=35, to=95, by=5))
-plot(hist.train,col=c1,ylim=c(0,600))
+plot(hist.train,col=c1,ylim=c(0,600), main = "Histogram of the response variable in the simulation datasets", xlab = "Response variable")
 plot(hist.test, add = TRUE, col = c2)
+legend("topright", pch=15, legend = c("Train set", "Test set"), col = c("lightblue","pink"))
 ```
 
 ###Predicted age
@@ -8733,7 +8735,7 @@ Observe the variance of voxels perhaps? and visualise
 ```{r}
 hs.int<-matrix(,nrow=50,ncol=4)
 for(i in 1:50){
-  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug10_hsvwb_coverage_",i,".csv")))
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_coverage_",i,".csv")))
 }
 colMeans(hs.int)
 ```
@@ -8751,11 +8753,11 @@ out$inrsq<-round(1-sserr_ridge/sstot,5)*100
 ```{r}
 hs.int<-matrix(,nrow=50,ncol=13)
 for(i in 1:50){
-  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug10_hsvwb_noscale_",i,".csv"))))
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_noscale_",i,".csv"))))
 }
 print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
 colMeans(hs.int[,1:6])
-# library(matrixStats)
+ library(matrixStats)
 sqrt(colVars(hs.int[,1:6]))
 
 ```
@@ -8833,9 +8835,8 @@ Pick run 7
 
 ##Stochastic phase
 Plot of SGD, EMB SGD, IG, HC
-16,17,23,25,26,30,31,33,36,38,39,42,46,48,5,50,8,
 ```{r}
-#IG with alpha = 5 and initialisation with mean
+#IG with alpha = 6 and initialisation with mean
 runs <- c(15,16,17,22,26,27,28,3,30,36,39,4,47,49,50,7,8)
 res.mat <- array(,dim=c(2,length(runs),800))
 for(i in runs){
@@ -8984,7 +8985,7 @@ res.iqr2.test <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,
 
 
 #Corresponding lr:
-res.nn.loss.sgd.2 <- res.iqr[2,]
+# res.nn.loss.sgd.2 <- res.iqr[2,]
 
 res.nn.loss.sgd.2 <- rbind(res.iqr.train[2,],res.iqr.test[2,])
 res.nn.loss.sgd.3 <- rbind(res.iqr.train[1,],res.iqr.test[1,])
@@ -9380,6 +9381,1270 @@ Out-PPI = 92.25 (91.9 without PV)
 out-RSQ = 55.2%
 
 
+#12 Aug mainly REAL-DATA
+
+##Load SGD real-data
+```{r}
+#IG with alpha = 6 and initialisation with mean
+runs <- c(1,12,15,18,2,20,28,39,4,41,45,48,50)
+res.mat <- array(,dim=c(2,length(runs),280))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",i,".csv")))
+}
+#Empirical bayes with 0.1 init var
+runs2 <- c(11,18,21,3,35,45,46,47,9)
+res.mat2 <- array(,dim=c(2,length(runs2),280))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+#SGD
+runs3 <- c(14,20,38,4,40,49,6)
+res.mat3 <- array(,dim=c(2,length(runs3),280))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_loss__jobid_",i,".csv")))
+}
+#HSP
+runs4 <- c(24,27,3,30,31,32,39,42)
+res.mat4 <- array(,dim=c(2,length(runs4),280))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("IG(6,0.5)",", n=",length(runs))
+                             ,paste0("EB",", n=",length(runs2))
+                             ,paste0("Vanilla",", n=",length(runs3))
+                             ,paste0("HC",", n=",length(runs4)))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:280,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(5,7))
+lines(x=1:280,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:280,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:280,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:280,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:280,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:280,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:280,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)  
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:280,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(4,7))
+lines(x=1:280,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:280,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:280,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:280,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:280,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:280,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:280,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:280,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+Run time 5.5hrs 
+
+ALSO need to look at the mean stats of the results
+
+##Contrast with doing HSP and GPR
+
+###GPR
+```{r}
+hs.int<-matrix(,nrow=50,ncol=14)
+for(i in 1:50){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_gpr_",i,".csv"))))[,1]
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+colMeans(hs.int[,1:6])
+ library(matrixStats)
+sqrt(colVars(hs.int[,1:6]))
+```
+running time 15-20 seconds (not minutes??)
+
+###HSP
+```{r}
+hs.int<-matrix(,nrow=50,ncol=4)
+for(i in 1:50){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+```
+This shows that all 50 runs of HSP has 
+98.9% in-sample truth coverage
+and 89% out-of-sample truth coverage
+
+```{r}
+hs.int<-matrix(,nrow=50,ncol=13)
+for(i in 1:50){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+colMeans(hs.int[,1:6])
+ library(matrixStats)
+sqrt(colVars(hs.int[,1:6]))
+```
+
+
+##Create a plot that contains all GP NN, GPR and HSP
+
+
+##SG+LD
+Choose a run from IG
+c(1,12,15,18,2,20,28,39,4,41,45,48,50)
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",1,".csv")))
+res.nn.loss.sgd.2 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",2,".csv")))
+res.nn.loss.sgd.3 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",4,".csv")))
+res.nn.loss.sgd.4 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",12,".csv")))
+res.nn.loss.sgd.5 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",15,".csv")))
+res.nn.loss.sgd.6 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",18,".csv")))
+res.nn.loss.sgd.7 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",20,".csv")))
+res.nn.loss.sgd.8 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",28,".csv")))
+res.nn.loss.sgd.9 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",39,".csv")))
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       sqrt(res.nn.loss.sgd.1[2,]), sqrt(res.nn.loss.sgd.2[2,]),
+                        sqrt(res.nn.loss.sgd.3[2,]),sqrt(res.nn.loss.sgd.4[2,]),sqrt(res.nn.loss.sgd.5[2,]),
+                       sqrt(res.nn.loss.sgd.6[2,]),sqrt(res.nn.loss.sgd.7[2,]),sqrt(res.nn.loss.sgd.8[2,]),sqrt(res.nn.loss.sgd.9[2,]))
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     sqrt(res.nn.loss.sgd.1[1,]), sqrt(res.nn.loss.sgd.2[1,]),
+                     sqrt(res.nn.loss.sgd.3[1,]),sqrt(res.nn.loss.sgd.4[1,]),sqrt(res.nn.loss.sgd.5[1,]),
+                     sqrt(res.nn.loss.sgd.6[1,]),sqrt(res.nn.loss.sgd.7[1,]),sqrt(res.nn.loss.sgd.8[1,]),sqrt(res.nn.loss.sgd.9[1,]))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","1", "2", "4","12","15","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[1,4,], type = "l", lty = 1,pch=2,col = 3,lwd=1)
+lines(full.res[1,5,], type = "l", lty = 1,pch=3,col = 4,lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,pch=3,col = 5,lwd=1)
+lines(full.res[1,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[1,8,], type = "b", lty = 2,pch=3,col = 3,lwd=1)
+lines(full.res[1,9,], type = "b", lty = 2,pch=3,col = 4,lwd=1)
+lines(full.res[1,10,], type = "b", lty = 2,pch=3,col = 5,lwd=1)
+lines(full.res[1,11,], type = "b", lty = 2,pch=3,col = 7,lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Validation RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,pch=1,col = 1,lwd=1)
+lines(full.res[2,4,], type = "l", lty = 1,pch=2,col = 3,lwd=3)
+lines(full.res[2,5,], type = "l", lty = 1,pch=3,col = 4,lwd=3)
+lines(full.res[2,6,], type = "l", lty = 1,pch=2,col = 5,lwd=1)
+lines(full.res[2,7,], type = "l", lty = 1,pch=3,col = 7,lwd=1)
+
+lines(full.res[2,8,], type = "b", lty = 2,pch=3,col = 3,lwd=.2)
+lines(full.res[2,9,], type = "b", lty = 2,pch=3,col = 4,lwd=.2)
+lines(full.res[2,10,], type = "b", lty = 2,pch=3,col = 5,lwd=.2)
+lines(full.res[2,11,], type = "b", lty = 2,pch=3,col = 7,lwd=.2)
+legend('topright',legend = leglab,lty=c(1),col=c("white",1,3,4,5,7,6,2))
+```
+Pick run 4
+Look at SGLD, initialise by IG run #7
+```{r}
+res.nn.loss.sgd.1 <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",4,".csv")))
+#Load many runs of LD:
+runs <- c(1,14,16,31,36,47)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_nnvwbsgldig_lowlr2_loss__jobid_",i,".csv")))
+}
+
+
+res.iqr.train <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+
+res.iqr.test <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
 
 
 
+#Corresponding lr:
+res.nn.loss.sgd.2 <- rbind(res.iqr.train[2,],res.iqr.test[2,])
+res.nn.loss.sgd.3 <- rbind(res.iqr.train[1,],res.iqr.test[1,])
+res.nn.loss.sgd.4 <- rbind(res.iqr.train[3,],res.iqr.test[3,])
+
+
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40
+wb.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_",poly_degree,a_concentration,b_smoothness,"_",4,".csv")))
+hs.res <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_n12_hsvwb_noscale_",1,".csv")))
+full.res.out <- rbind( wb.res[5],hs.res[6],
+                       c(sqrt(res.nn.loss.sgd.1[2,]),rep(NA,length(res.nn.loss.sgd.2[2,]))), c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.2[2,])),
+                        c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.3[2,])),
+                       c(rep(NA,length(res.nn.loss.sgd.1[2,])),sqrt(res.nn.loss.sgd.4[2,])))
+
+full.res.in <- rbind(wb.res[5],hs.res[5],
+                     c(sqrt(res.nn.loss.sgd.1[1,]),rep(NA,length(res.nn.loss.sgd.2[1,]))), c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.2[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.3[1,])),
+                     c(rep(NA,length(res.nn.loss.sgd.1[1,])),sqrt(res.nn.loss.sgd.4[1,])))
+full.res <- array(,dim=c(2,dim(full.res.in)))
+full.res[1,,] <- full.res.in
+full.res[2,,] <- full.res.out
+
+leglab <- c("method","SGD", "SGLD-0.001","SGLD-0.01","Synthetic noise","HSP vs GP-Reg")
+line.type <- 'l'
+plot(full.res[1,1,],type=line.type,col = 6, ylim = c(2.5, max(full.res[1,,],na.rm = TRUE)),lwd=2,
+     main = "Training RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[1,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[1,3,], type = "l", lty = 1,col = 1,lwd=2)
+lines(full.res[1,4,], type = "l", lty = 1,col = 'red',lwd=2)
+lines(full.res[1,5,], type = "l", lty = 1,col = 'pink',lwd=1)
+lines(full.res[1,6,], type = "l", lty = 1,col = 'pink',lwd=1)
+
+legend('bottomright',legend = leglab,lty=c(1),col=c("white",1,"red","blue",6,2))
+
+#out-of-sample
+plot(full.res[2,1,],type=line.type,col = 6, ylim = c(min(full.res[2,,],na.rm = TRUE), max(full.res[2,,],na.rm = TRUE)),lwd=2,
+     main = "Test RMSE",
+     ylab = "Batch RMSE",xlab= "Iteration")
+lines(full.res[2,2,],type=line.type,col = 2,lwd=2)
+lines(full.res[2,3,], type = "l", lty = 1,col = 1,lwd=2)
+lines(full.res[2,4,], type = "l", lty = 1,col = 'red',lwd=2)
+lines(full.res[2,5,], type = "l", lty = 1,col = 'pink',lwd=1)
+lines(full.res[2,6,], type = "l", lty = 1,col = 'pink',lwd=1)
+legend('top',legend = leglab,lty=c(1),col=c("white",1,"red","blue",6,2))
+```
+
+##Assess Posterior predictive interval of SGLD 0.001
+Pick a random run
+Load data
+```{r}
+p.in.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_nnvwbsgldig_lowlr2_inpred__jobid_14.feather')))
+p.out.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_nnvwbsgldig_lowlr2_outpred__jobid_14.feather')))
+colnames(p.in.ig) <- c('id','pred')
+
+#### In
+mean.in.ig <- aggregate(.~id,data=p.in.ig,mean)
+sd.in.ig <-  aggregate(.~id,data=p.in.ig,sd)
+library(plotrix)
+ser.in.ig <- aggregate(.~id,data=p.in.ig,std.error)
+stat.in.ig <- cbind(mean.in.ig,sd.in.ig$pred,ser.in.ig$pred)
+colnames(stat.in.ig) <- c('id','mean','sd','stderr')
+stat.in.ig$adjstderr <- stat.in.ig$sd*sqrt(1+1/400)
+
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.train.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[1,]
+wb2.train.pred <- age_tab$age[wb2.train.id]
+
+
+true.train<- data.frame(wb2.train.id,wb2.train.pred,row.names = NULL)
+colnames(true.train) <- c('id','true')
+stat.in.ig <- merge(stat.in.ig,true.train, by = 'id')
+
+#### Out
+colnames(p.out.ig) <- c('id','pred')
+mean.out.ig <- aggregate(.~id,data=p.out.ig,mean)
+sd.out.ig <-  aggregate(.~id,data=p.out.ig,sd)
+library(plotrix)
+ser.out.ig <- aggregate(.~id,data=p.out.ig,std.error)
+stat.out.ig <- cbind(mean.out.ig,sd.out.ig$pred,ser.out.ig$pred)
+colnames(stat.out.ig) <- c('id','mean','sd','stderr')
+stat.out.ig$adjstderr <- stat.out.ig$sd*sqrt(1+1/1600)
+
+wb2.test.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[2,]
+wb2.test.pred <- age_tab$age[wb2.test.id]
+true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
+colnames(true.test) <- c('id','true')
+
+stat.out.ig <- merge(stat.out.ig,true.test, by = 'id')
+
+stat.out.ig$stderrglob <- sqrt(wb.res[5]^2+stat.out.ig$sd^2)
+
+in.mse <- mean((stat.in.ig$mean-stat.in.ig$true)^2)
+
+####For IG insample
+# in-sample statistics
+stat.in.ig$stderrmod <- sqrt(in.mse+stat.in.ig$sd^2)
+# plot(y=stat.in.ig$sd,x=stat.in.ig$id)
+
+stat.in.ig$lwrmod <- stat.in.ig$mean - qt(0.975,400-1)*stat.in.ig$stderrmod
+stat.in.ig$uprmod <- stat.in.ig$mean + qt(0.975,400-1)*stat.in.ig$stderrmod
+
+#####Define proportion counting
+#Prediction
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,sum(between(p.in.ig$pred[p.in.ig$id==stat.in.ig$id[i]],stat.in.ig$lwrmod[i],stat.in.ig$uprmod[i]))/400*100)
+}
+stat.in.ig$within.predmod <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,(between(stat.in.ig$true[i],stat.in.ig$lwrmod[i],stat.in.ig$uprmod[i])))
+}
+stat.in.ig$true.covermod <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.in.ig$within.predmod>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.in.ig$true.covermod)/2000*100))
+
+no.obs <- 50
+plot(y=stat.in.ig$true[1:no.obs],x=1:no.obs ,main = 'True age and the 95% Prediction Interval',
+     xlab='Subject Number',ylab='Age (years)', pch = 20)
+abline(h=95,col='red',lwd=2)
+points(stat.in.ig$lwrmod[1:no.obs],x = 1:no.obs,col='red',pch=15)
+points(stat.in.ig$uprmod[1:no.obs],x = 1:no.obs,col='blue',pch=15 )
+abline(v=(1:no.obs)*stat.in.ig$true.covermod[1:no.obs],lty=2,col='darkgreen',lwd=1)
+abline(v=(1:no.obs)*(1-stat.in.ig$true.covermod[1:no.obs]),lty=2,col='grey',lwd=0.5)
+abline(v=0,col='white',lwd=3)
+
+
+
+####For IG Out-of-sample#########
+stat.out.ig$stderrmod <- sqrt(in.mse+stat.out.ig$sd^2)
+
+stat.out.ig$lwrmod <- stat.out.ig$mean - qt(0.975,1600-1)*stat.out.ig$stderrmod
+stat.out.ig$uprmod <- stat.out.ig$mean + qt(0.975,1600-1)*stat.out.ig$stderrmod
+
+#####Define proportion counting
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,sum(between(p.out.ig$pred[p.out.ig$id==stat.out.ig$id[i]],stat.out.ig$lwrmod[i],stat.out.ig$uprmod[i]))/1600*100)
+}
+stat.out.ig$within.predmod <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,(between(stat.out.ig$true[i],stat.out.ig$lwrmod[i],stat.out.ig$uprmod[i])))
+}
+stat.out.ig$true.covermod <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.out.ig$within.predmod>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.out.ig$true.covermod)/2000*100))
+
+no.obs <- 50
+plot(y=stat.out.ig$true[1:no.obs],x=1:no.obs ,main = 'True age and the 95% Prediction Interval',
+     xlab='Subject Number',ylab='Age (years)', pch = 20)
+abline(h=95,col='red',lwd=2)
+points(stat.out.ig$lwrmod[1:no.obs],x = 1:no.obs,col='red',pch=15)
+points(stat.out.ig$uprmod[1:no.obs],x = 1:no.obs,col='blue',pch=15 )
+
+abline(v=(1:no.obs)*stat.out.ig$true.covermod[1:no.obs],lty=2,col='darkgreen',lwd=1)
+abline(v=(1:no.obs)*(1-stat.out.ig$true.covermod[1:no.obs]),lty=2,col='grey',lwd=0.5)
+abline(v=0,col='white',lwd=3)
+
+# RMSE and Rsq
+print(paste0('in RMSE: ',sqrt(mean((stat.in.ig$mean-stat.in.ig$true)^2))))
+print(paste0('out RMSE: ',sqrt(mean((stat.out.ig$mean-stat.out.ig$true)^2))))
+print(paste0('True noise: 4.58'))
+print(paste0('in MAE: ',(mean(abs(stat.in.ig$mean-stat.in.ig$true)))))
+print(paste0('out MAE: ',(mean(abs(stat.out.ig$mean-stat.out.ig$true)))))
+#SGLD
+print(paste0('in R-square: ',rsqcal(stat.in.ig$true,stat.in.ig$mean))) # In-sample
+print(paste0('in R-square: ',rsqcal(stat.out.ig$true,stat.out.ig$mean))) #Out-of-sample
+```
+[1] "Proprtion of subject within 95%: 0"
+[1] "Proprtion of true lying within subject 95% prediction interval: 95.45"
+[1] "Proprtion of subject within 95%: 0"
+[1] "Proprtion of true lying within subject 95% prediction interval: 92"
+[1] "in RMSE: 4.34060658117254"
+[1] "out RMSE: 4.97635368291087"
+[1] "True noise: 4.58"
+[1] "in MAE: 3.46720334009228"
+[1] "out MAE: 3.96393497759566"
+[1] "in R-square: 0.681491419047454"
+[1] "in R-square: 0.582988922513948"
+
+###Compare to without personalised variance
+####For IG insample
+in-sample statistics
+```{r}
+stat.in.ig$modmse <- sqrt(in.mse)
+
+stat.in.ig$lwrmodmse <- stat.in.ig$mean - qt(0.975,400-1)*stat.in.ig$modmse
+stat.in.ig$uprmodmse <- stat.in.ig$mean + qt(0.975,400-1)*stat.in.ig$modmse
+
+#Prediction
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,sum(between(p.in.ig$pred[p.in.ig$id==stat.in.ig$id[i]],stat.in.ig$lwrmodmse[i],stat.in.ig$uprmodmse[i]))/400*100)
+}
+stat.in.ig$within.predmodmse <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,(between(stat.in.ig$true[i],stat.in.ig$lwrmodmse[i],stat.in.ig$uprmodmse[i])))
+}
+stat.in.ig$true.covermodmse <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.in.ig$within.predmodmse>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.in.ig$true.covermodmse)/2000*100))
+
+stat.out.ig$modmsemse <- sqrt(in.mse)
+
+stat.out.ig$lwrmodmse <- stat.out.ig$mean - qt(0.975,1600-1)*stat.out.ig$modmse
+stat.out.ig$uprmodmse <- stat.out.ig$mean + qt(0.975,1600-1)*stat.out.ig$modmse
+
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,sum(between(p.out.ig$pred[p.out.ig$id==stat.out.ig$id[i]],stat.out.ig$lwrmodmse[i],stat.out.ig$uprmodmse[i]))/1600*100)
+}
+stat.out.ig$within.predmodmse <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,(between(stat.out.ig$true[i],stat.out.ig$lwrmodmse[i],stat.out.ig$uprmodmse[i])))
+}
+stat.out.ig$true.covermodmse <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.out.ig$within.predmodmse>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.out.ig$true.covermodmse)/2000*100))
+
+print(paste0('in RMSE: ',sqrt(mean((stat.in.ig$mean-stat.in.ig$true)^2))))
+print(paste0('out RMSE: ',sqrt(mean((stat.out.ig$mean-stat.out.ig$true)^2))))
+print(paste0('True noise: 4.58'))
+```
+Took 7 hours to run 100 epochs
+
+
+
+
+#16 Aug
+
+##Assess numerical performane of SGD (Real data)
+runs <- c(1,12,15,18,2,20,28,39,4,41,45,48,50)
+res.mat <- array(,dim=c(2,length(runs),280))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_loss__jobid_",i,".csv")))
+}
+#Empirical bayes with 0.1 init var
+runs2 <- c(11,18,21,3,35,45,46,47,9)
+res.mat2 <- array(,dim=c(2,length(runs2),280))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+#SGD
+runs3 <- c(14,20,38,4,40,49,6)
+res.mat3 <- array(,dim=c(2,length(runs3),280))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwb4_loss__jobid_",i,".csv")))
+}
+#HSP
+runs4 <- c(24,27,3,30,31,32,39,42)
+res.mat4 <- array(,dim=c(2,length(runs4),280))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbhc_loss__jobid_",i,".csv")))
+}
+```{r}
+stat.ig.re <- meanstats.re("aug11_nnvwbig_a6",c(1,12,15,18,2,20,28,39,4,41,45,48,50))
+stat.eb.re <-meanstats.re("aug11_nnvwbbayes_initvar",  c(11,18,21,3,35,45,46,47,9))
+stat.vanilla.re <- meanstats.re("aug11_nnvwb4",c(14,20,38,4,40,49,6))
+stat.hcp.re <- meanstats.re("aug11_nnvwbhc",c(24,27,3,30,31,32,39,42))
+```
+
+```{r}
+signif(stat.ig.re,3)
+signif(stat.eb.re,3)
+signif(stat.vanilla.re,3)
+signif(stat.hcp.re,3)
+```
+
+##Load MCMC Predictive Interval
+```{r}
+hs.int<-matrix(,nrow=50,ncol=4)
+for(i in 1:50){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+```
+
+
+```{r}
+hs.int<-matrix(,nrow=50,ncol=13)
+for(i in 1:50){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+
+```
+
+
+#18 August
+
+
+##Simulation
+###Load GPR
+```{r}
+hs.int<-matrix(,nrow=50,ncol=4)
+for(i in 1:50){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=50,ncol=13)
+for(i in 1:50){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+
+```
+
+###Load res4 sgd
+####Stochastic phase
+Plot of SGD, EMB SGD, IG, HC
+```{r}
+#IG with alpha = 6 and initialisation with mean
+runs <- c(10,11,12,13,15,17,2,21,25,26,27,28,29,3,30,31,33,37,38,4,43,44,45,47,48,49,5,50,6,7,8)
+res.mat <- array(,dim=c(2,length(runs),800))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_res4_aug17_nnvwbig_a6_loss__jobid_",i,".csv")))
+}
+#Empirical bayes with 0.1 init var
+runs2 <- c(1,10,11,12,13,15,16,17,19,2,20,23,24,29,3,30,33,34,37,39,4,40,42,44,48,5,50,6,8)
+res.mat2 <- array(,dim=c(2,length(runs2),800))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_res4_aug17_nnvwbbayes_initvar_loss__jobid_",i,".csv")))
+}
+#SGD
+runs3 <- c(10,12,15,17,2,21,24,25,26,27,29,3,30,33,34,35,36,38,41,44,46,47,48,5,50,6,7,9)
+res.mat3 <- array(,dim=c(2,length(runs3),800))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_res4_aug17_nnvwb4_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("IG(6,0.5)",", n=",length(runs))
+                             ,paste0("EB",", n=",length(runs2))
+                             ,paste0("Vanilla",", n=",length(runs3)))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(5,7))
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:800,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)  
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:800,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(4,7))
+lines(x=1:800,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:800,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:800,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:800,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:800,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen'))
+```
+Use `res4_summary_script.R`
+```{r}
+# stat.ig <- meanstats.sim("res4_aug17_nnvwbig_a6",c(10,11,12,13,15,17,2,21,25,26,27,28,29,3,30,31,33,37,38,4,43,44,45,47,48,49,5,50,6,7,8))
+# stat.eb <-meanstats.sim("res4_aug17_nnvwbbayes_initvar", c(1,10,11,12,13,15,16,17,19,2,20,23,24,29,3,30,33,34,37,39,4,40,42,44,48,5,50,6,8))
+# stat.vanilla <- meanstats.sim("res4_aug17_nnvwb4", c(10,12,15,17,2,21,24,25,26,27,29,3,30,33,34,35,36,38,41,44,46,47,48,5,50,6,7,9))
+# stat.hcp <- meanstats.sim("ju31_nnvwbhc",c(1,  34,14, 35,16, 36,17, 38,22, 41,24, 48,30, 6,33, 8))
+```
+
+```{r}
+(stat.ig <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_res4_summary_ig.csv"))
+(stat.eb <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_res4_summary_eb.csv"))
+(stat.vanilla <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_res4_summary_van.csv"))
+```
+
+
+##Real
+
+###Load SGLD 300 epochs
+Pick a random run
+Load data
+```{r}
+p.in.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_inpred__jobid_20.feather')))
+p.out.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_outpred__jobid_20.feather')))
+colnames(p.in.ig) <- c('id','pred')
+
+#### In
+mean.in.ig <- aggregate(.~id,data=p.in.ig,mean)
+sd.in.ig <-  aggregate(.~id,data=p.in.ig,sd)
+library(plotrix)
+ser.in.ig <- aggregate(.~id,data=p.in.ig,std.error)
+stat.in.ig <- cbind(mean.in.ig,sd.in.ig$pred,ser.in.ig$pred)
+colnames(stat.in.ig) <- c('id','mean','sd','stderr')
+stat.in.ig$adjstderr <- stat.in.ig$sd*sqrt(1+1/400)
+
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.train.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[1,]
+wb2.train.pred <- age_tab$age[wb2.train.id]
+
+
+true.train<- data.frame(wb2.train.id,wb2.train.pred,row.names = NULL)
+colnames(true.train) <- c('id','true')
+stat.in.ig <- merge(stat.in.ig,true.train, by = 'id')
+
+#### Out
+colnames(p.out.ig) <- c('id','pred')
+mean.out.ig <- aggregate(.~id,data=p.out.ig,mean)
+sd.out.ig <-  aggregate(.~id,data=p.out.ig,sd)
+library(plotrix)
+ser.out.ig <- aggregate(.~id,data=p.out.ig,std.error)
+stat.out.ig <- cbind(mean.out.ig,sd.out.ig$pred,ser.out.ig$pred)
+colnames(stat.out.ig) <- c('id','mean','sd','stderr')
+stat.out.ig$adjstderr <- stat.out.ig$sd*sqrt(1+1/1600)
+
+wb2.test.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[2,]
+wb2.test.pred <- age_tab$age[wb2.test.id]
+true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
+colnames(true.test) <- c('id','true')
+
+stat.out.ig <- merge(stat.out.ig,true.test, by = 'id')
+
+stat.out.ig$stderrglob <- sqrt(wb.res[5]^2+stat.out.ig$sd^2)
+
+in.mse <- mean((stat.in.ig$mean-stat.in.ig$true)^2)
+
+####For IG insample
+# in-sample statistics
+stat.in.ig$stderrmod <- sqrt(in.mse+stat.in.ig$sd^2)
+# plot(y=stat.in.ig$sd,x=stat.in.ig$id)
+
+stat.in.ig$lwrmod <- stat.in.ig$mean - qt(0.975,400-1)*stat.in.ig$stderrmod
+stat.in.ig$uprmod <- stat.in.ig$mean + qt(0.975,400-1)*stat.in.ig$stderrmod
+
+#####Define proportion counting
+#Prediction
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,sum(between(p.in.ig$pred[p.in.ig$id==stat.in.ig$id[i]],stat.in.ig$lwrmod[i],stat.in.ig$uprmod[i]))/400*100)
+}
+stat.in.ig$within.predmod <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,(between(stat.in.ig$true[i],stat.in.ig$lwrmod[i],stat.in.ig$uprmod[i])))
+}
+stat.in.ig$true.covermod <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.in.ig$within.predmod>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.in.ig$true.covermod)/2000*100))
+
+no.obs <- 50
+plot(y=stat.in.ig$true[1:no.obs],x=1:no.obs ,main = 'True age and the 95% Prediction Interval',
+     xlab='Subject Number',ylab='Age (years)', pch = 20)
+abline(h=95,col='red',lwd=2)
+points(stat.in.ig$lwrmod[1:no.obs],x = 1:no.obs,col='red',pch=15)
+points(stat.in.ig$uprmod[1:no.obs],x = 1:no.obs,col='blue',pch=15 )
+abline(v=(1:no.obs)*stat.in.ig$true.covermod[1:no.obs],lty=2,col='darkgreen',lwd=1)
+abline(v=(1:no.obs)*(1-stat.in.ig$true.covermod[1:no.obs]),lty=2,col='grey',lwd=0.5)
+abline(v=0,col='white',lwd=3)
+
+
+
+####For IG Out-of-sample#########
+stat.out.ig$stderrmod <- sqrt(in.mse+stat.out.ig$sd^2)
+
+stat.out.ig$lwrmod <- stat.out.ig$mean - qt(0.975,1600-1)*stat.out.ig$stderrmod
+stat.out.ig$uprmod <- stat.out.ig$mean + qt(0.975,1600-1)*stat.out.ig$stderrmod
+
+#####Define proportion counting
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,sum(between(p.out.ig$pred[p.out.ig$id==stat.out.ig$id[i]],stat.out.ig$lwrmod[i],stat.out.ig$uprmod[i]))/1600*100)
+}
+stat.out.ig$within.predmod <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,(between(stat.out.ig$true[i],stat.out.ig$lwrmod[i],stat.out.ig$uprmod[i])))
+}
+stat.out.ig$true.covermod <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.out.ig$within.predmod>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.out.ig$true.covermod)/2000*100))
+
+no.obs <- 50
+plot(y=stat.out.ig$true[1:no.obs],x=1:no.obs ,main = 'True age and the 95% Prediction Interval',
+     xlab='Subject Number',ylab='Age (years)', pch = 20)
+abline(h=95,col='red',lwd=2)
+points(stat.out.ig$lwrmod[1:no.obs],x = 1:no.obs,col='red',pch=15)
+points(stat.out.ig$uprmod[1:no.obs],x = 1:no.obs,col='blue',pch=15 )
+
+abline(v=(1:no.obs)*stat.out.ig$true.covermod[1:no.obs],lty=2,col='darkgreen',lwd=1)
+abline(v=(1:no.obs)*(1-stat.out.ig$true.covermod[1:no.obs]),lty=2,col='grey',lwd=0.5)
+abline(v=0,col='white',lwd=3)
+
+# RMSE and Rsq
+print(paste0('in RMSE: ',sqrt(mean((stat.in.ig$mean-stat.in.ig$true)^2))))
+print(paste0('out RMSE: ',sqrt(mean((stat.out.ig$mean-stat.out.ig$true)^2))))
+print(paste0('True noise: 4.58'))
+print(paste0('in MAE: ',(mean(abs(stat.in.ig$mean-stat.in.ig$true)))))
+print(paste0('out MAE: ',(mean(abs(stat.out.ig$mean-stat.out.ig$true)))))
+#SGLD
+print(paste0('in R-square: ',rsqcal(stat.in.ig$true,stat.in.ig$mean))) # In-sample
+print(paste0('in R-square: ',rsqcal(stat.out.ig$true,stat.out.ig$mean))) #Out-of-sample
+```
+
+####Compare to without personalised variance
+####For IG insample
+in-sample statistics
+```{r}
+stat.in.ig$modmse <- sqrt(in.mse)
+
+stat.in.ig$lwrmodmse <- stat.in.ig$mean - qt(0.975,400-1)*stat.in.ig$modmse
+stat.in.ig$uprmodmse <- stat.in.ig$mean + qt(0.975,400-1)*stat.in.ig$modmse
+
+#Prediction
+library("dplyr")
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,sum(between(p.in.ig$pred[p.in.ig$id==stat.in.ig$id[i]],stat.in.ig$lwrmodmse[i],stat.in.ig$uprmodmse[i]))/400*100)
+}
+stat.in.ig$within.predmodmse <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.in.ig)){
+  within.pred <- c(within.pred,(between(stat.in.ig$true[i],stat.in.ig$lwrmodmse[i],stat.in.ig$uprmodmse[i])))
+}
+stat.in.ig$true.covermodmse <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.in.ig$within.predmodmse>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.in.ig$true.covermodmse)/2000*100))
+
+stat.out.ig$modmsemse <- sqrt(in.mse)
+
+stat.out.ig$lwrmodmse <- stat.out.ig$mean - qt(0.975,1600-1)*stat.out.ig$modmse
+stat.out.ig$uprmodmse <- stat.out.ig$mean + qt(0.975,1600-1)*stat.out.ig$modmse
+
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,sum(between(p.out.ig$pred[p.out.ig$id==stat.out.ig$id[i]],stat.out.ig$lwrmodmse[i],stat.out.ig$uprmodmse[i]))/1600*100)
+}
+stat.out.ig$within.predmodmse <- within.pred
+
+#True
+within.pred <- vector(mode='numeric')
+for(i in 1:nrow(stat.out.ig)){
+  within.pred <- c(within.pred,(between(stat.out.ig$true[i],stat.out.ig$lwrmodmse[i],stat.out.ig$uprmodmse[i])))
+}
+stat.out.ig$true.covermodmse <- within.pred
+
+print(paste0('Proprtion of subject within 95%: ',sum(stat.out.ig$within.predmodmse>=95)/2000*100))
+print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.out.ig$true.covermodmse)/2000*100))
+
+print(paste0('in RMSE: ',sqrt(mean((stat.in.ig$mean-stat.in.ig$true)^2))))
+print(paste0('out RMSE: ',sqrt(mean((stat.out.ig$mean-stat.out.ig$true)^2))))
+print(paste0('True noise: 4.58'))
+```
+###Load GPR
+```{r}
+hs.int<-matrix(,nrow=50,ncol=4)
+for(i in 1:50){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_gpr_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=50,ncol=13)
+for(i in 1:50){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_gpr_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+
+```
+
+
+#26 August
+Do real-data res4
+```{r}
+(stat.ig <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/re_res4_summary_ig.csv"))
+(stat.eb <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/re_res4_summary_eb.csv"))
+(stat.vanilla <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/re_res4_summary_van.csv"))
+```
+
+#28 Aug
+For relu and failed decomposition assess.
+Run 5 was successful `/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug28_nnvwb4_zmat_*`
+Run 8 is a short example of failure 172 seems good `/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug28_nnvwb4_zmat__jobid_8_172.csv `
+```{r}
+relu.val <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug28_nnvwb4_hidmat__jobid_8_172.csv")
+znb <- read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug28_nnvwb4_zmat__jobid_8_172.csv")
+```
+
+```{r}
+lmtest<- fast_horseshoe_lm(1:30,as.matrix(znb)) #This also gives the bias term
+```
+
+```{r}
+relu.val #30 x 12
+znb #30 x 121 (where does 120 column comes from ===> from choose(7+3,3))
+```
+
+```{r}
+library(matrixcalc)
+is.positive.definite(as.matrix(znb), tol=1e-8)
+
+```
+
+```{r}
+svd.z <- svd(znb)
+plot(svd.z$d[2:30])
+```
+
+#29 Aug
+
+##Observe prediction bias towards younger/olderage *TEST
+### Simulation
+
+#### HSP
+```{r}
+wb2.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_4_addednoise.csv")))
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="HSP Prediction", xlab = "Truth", main = "Out-of-sample HSP against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+```
+#### GPR
+```{r}
+wb2.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_4_addednoise.csv")))
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPR Prediction", xlab = "Truth", main = "Out-of-sample GPR against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+
+```
+#### GPNN-IG
+```{r}
+wb2.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_4_addednoise.csv")))
+# hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug8_nnvwbig_a6_outpred_",7,".csv")))
+# as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug8_nnvwbig_a6_outpred__jobid_7.feather'))
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug8_nnvwbig_a6_outpred__jobid_7.feather'))
+hs.pred.train <- tail(pred.test[2,],2000)
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPNN-IG Prediction (posterior mode)", xlab = "Truth", main = "Out-of-sample GPNN-IG against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+```
+
+#### LD
+```{r}
+p.out.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug8_nnvwbsgldig_lowlr2_outpred__jobid_13.feather')))
+
+colnames(p.out.ig) <- c('id','pred')
+mean.out.ig <- aggregate(.~id,data=p.out.ig,mean)
+sd.out.ig <-  aggregate(.~id,data=p.out.ig,sd)
+library(plotrix)
+ser.out.ig <- aggregate(.~id,data=p.out.ig,std.error)
+stat.out.ig <- cbind(mean.out.ig,sd.out.ig$pred,ser.out.ig$pred)
+colnames(stat.out.ig) <- c('id','mean','sd','stderr')
+stat.out.ig$adjstderr <- stat.out.ig$sd*sqrt(1+1/1600)
+
+wb2.test.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[2,]
+wb2.test.pred <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_outpred_4_addednoise.csv")))
+true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
+colnames(true.test) <- c('id','true')
+
+stat.out.ig <- merge(stat.out.ig,true.test, by = 'id')
+
+wb2.pred.train <- stat.out.ig$true
+hs.pred.train <- stat.out.ig$mean
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="LD-IG Prediction (posterior mean)", xlab = "Truth", main = "Out-of-sample LD-IG against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+
+```
+
+### Real data
+
+#### HSP
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="HSP Prediction", xlab = "Truth", main = "Out-of-sample HSP against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+```
+#### GPR
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_gpr_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPR Prediction", xlab = "Truth", main = "Out-of-sample GPR against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+
+```
+#### GPNN-IG
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_outpred__jobid_4.feather'))
+hs.pred.train <- tail(pred.test[2,],2000)
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPNN-IG Prediction (posterior mode)", xlab = "Truth", main = "Out-of-sample GPNN-IG against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+```
+
+#### LD
+```{r}
+p.out.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_outpred__jobid_20.feather')))
+
+colnames(p.out.ig) <- c('id','pred')
+mean.out.ig <- aggregate(.~id,data=p.out.ig,mean)
+sd.out.ig <-  aggregate(.~id,data=p.out.ig,sd)
+library(plotrix)
+ser.out.ig <- aggregate(.~id,data=p.out.ig,std.error)
+stat.out.ig <- cbind(mean.out.ig,sd.out.ig$pred,ser.out.ig$pred)
+colnames(stat.out.ig) <- c('id','mean','sd','stderr')
+stat.out.ig$adjstderr <- stat.out.ig$sd*sqrt(1+1/1600)
+
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.test.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[2,]
+wb2.test.pred <- age_tab$age[ind.to.use$test]
+true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
+colnames(true.test) <- c('id','true')
+
+stat.out.ig <- merge(stat.out.ig,true.test, by = 'id')
+
+wb2.pred.train <- stat.out.ig$true
+hs.pred.train <- stat.out.ig$mean
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="LD-IG Prediction (posterior mean)", xlab = "Truth", main = "Out-of-sample LD-IG against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+# print(coef(lm(hs.pred.train ~ wb2.pred.train))[2])
+
+```
+
+###Actually do Brain Age Gap for real data
+#### HSP
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_outpred_noscale_",1,".csv")))
+hs.pred.train <- hs.pred.train - wb2.pred.train
+boxplot(hs.pred.train ~wb2.pred.train, ylab="BAG (years)", xlab = "Truth (years)", main = "Out-of-sample HSP against Truth",ylim=c(-15,22))
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+```
+
+
+#### GPR
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_gpr_outpred_noscale_",1,".csv")))
+hs.pred.train <- hs.pred.train - wb2.pred.train
+boxplot(hs.pred.train ~wb2.pred.train, ylab="BAG (years)", xlab = "Truth (years)", main = "Out-of-sample GPR against Truth",ylim=c(-15,22))
+
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+
+```
+#### GPNN-IG
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_outpred__jobid_4.feather'))
+hs.pred.train <- tail(pred.test[2,],2000)
+hs.pred.train <- hs.pred.train - wb2.pred.train
+boxplot(hs.pred.train ~wb2.pred.train, ylab="BAG (years)", xlab = "Truth (years)", main = "Out-of-sample GPNN-IG against Truth",ylim=c(-15,22))
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+#### LD
+```{r}
+p.out.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_outpred__jobid_20.feather')))
+
+colnames(p.out.ig) <- c('id','pred')
+mean.out.ig <- aggregate(.~id,data=p.out.ig,mean)
+sd.out.ig <-  aggregate(.~id,data=p.out.ig,sd)
+library(plotrix)
+ser.out.ig <- aggregate(.~id,data=p.out.ig,std.error)
+stat.out.ig <- cbind(mean.out.ig,sd.out.ig$pred,ser.out.ig$pred)
+colnames(stat.out.ig) <- c('id','mean','sd','stderr')
+stat.out.ig$adjstderr <- stat.out.ig$sd*sqrt(1+1/1600)
+
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.test.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[2,]
+wb2.test.pred <- age_tab$age[ind.to.use$test]
+true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
+colnames(true.test) <- c('id','true')
+
+stat.out.ig <- merge(stat.out.ig,true.test, by = 'id')
+
+wb2.pred.train <- stat.out.ig$true
+hs.pred.train <- stat.out.ig$mean
+hs.pred.train <- hs.pred.train - wb2.pred.train
+
+boxplot(hs.pred.train ~wb2.pred.train, ylab="BAG (years)", xlab = "Truth (years)", main = "Out-of-sample LD-IG against Truth",ylim=c(-15,22))
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+```
+
+After meeting on 30 Aug, Tom says that it is known for BAG study to have such a bias
+either 
+1. Correct
+2. Plot against predictions, which, in linear model, Yhat - Y (residual) is known to be orthogonal to Y and Yhat 
+
+#30 Aug
+Doing option 2 of the above
+#### HSP
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug12_hsvwb_outpred_noscale_",1,".csv")))
+rd.pred <- round(hs.pred.train)
+hs.pred.train <- hs.pred.train - wb2.pred.train
+missing.pred <- setdiff(43:88,rd.pred)
+rd.pred <- c(rd.pred,missing.pred)
+hs.pred.train <- c(hs.pred.train,rep(100,length(missing.pred)))
+boxplot(hs.pred.train ~rd.pred, ylab="BAG (years)", xlab = "Age Prediction (years)", main = "Brain Age Gap of HSP model",ylim=c(-15,22))
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+```
+
+#### GPR
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_gpr_outpred_noscale_",1,".csv")))
+rd.pred <- round(hs.pred.train)
+hs.pred.train <- hs.pred.train - wb2.pred.train
+missing.pred <- setdiff(43:88,rd.pred)
+rd.pred <- c(rd.pred,missing.pred)
+hs.pred.train <- c(hs.pred.train,rep(100,length(missing.pred)))
+boxplot(hs.pred.train ~rd.pred, ylab="BAG (years)", xlab = "Age Prediction (years)", main = "Brain Age Gap of GPR model",ylim=c(-15,22))
+
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+
+```
+#### GPNN-IG
+```{r}
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.pred.train <- age_tab$age[ind.to.use$test]
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug11_nnvwbig_a6_outpred__jobid_4.feather'))
+hs.pred.train <- tail(pred.test[2,],2000)
+rd.pred <- round(hs.pred.train)
+hs.pred.train <- hs.pred.train - wb2.pred.train
+missing.pred <- setdiff(43:88,rd.pred)
+rd.pred <- c(rd.pred,missing.pred)
+hs.pred.train <- c(hs.pred.train,rep(100,length(missing.pred)))
+boxplot(hs.pred.train ~rd.pred, ylab="BAG (years)", xlab = "Age Prediction (years)", main = "Brain Age Gap of GPNN model",ylim=c(-15,22))
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+```
+
+#### LD
+```{r}
+p.out.ig <- as.data.frame(t(read_feather('/well/nichols/users/qcv214/bnn2/res3/pile/re_aug16_nnvwbsgldig_lowlr2_outpred__jobid_20.feather')))
+
+colnames(p.out.ig) <- c('id','pred')
+mean.out.ig <- aggregate(.~id,data=p.out.ig,mean)
+sd.out.ig <-  aggregate(.~id,data=p.out.ig,sd)
+library(plotrix)
+ser.out.ig <- aggregate(.~id,data=p.out.ig,std.error)
+stat.out.ig <- cbind(mean.out.ig,sd.out.ig$pred,ser.out.ig$pred)
+colnames(stat.out.ig) <- c('id','mean','sd','stderr')
+stat.out.ig$adjstderr <- stat.out.ig$sd*sqrt(1+1/1600)
+
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"));ind.to.use <- list()
+ind.to.use$test <- unlist(ind.temp[2,])
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+
+wb2.test.id<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv")))[2,]
+wb2.test.pred <- age_tab$age[ind.to.use$test]
+true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
+colnames(true.test) <- c('id','true')
+
+stat.out.ig <- merge(stat.out.ig,true.test, by = 'id')
+
+wb2.pred.train <- stat.out.ig$true
+hs.pred.train <- stat.out.ig$mean
+rd.pred <- round(hs.pred.train)
+hs.pred.train <- hs.pred.train - wb2.pred.train
+missing.pred <- setdiff(43:88,rd.pred)
+rd.pred <- c(rd.pred,missing.pred)
+hs.pred.train <- c(hs.pred.train,rep(100,length(missing.pred)))
+boxplot(hs.pred.train ~rd.pred, ylab="BAG (years)", xlab = "Age Prediction (years)", main = "Brain Age Gap of LD-IG model",ylim=c(-15,22))
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+
+```
+
+
+#28 Aug
+For relu and failed decomposition assess.
+Run 5 was successful `/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug30_nnvwb4_zmat_*`
+Run 8 is a short example of failure 172 seems good `/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug28_nnvwb4_zmat__jobid_8_172.csv `
+```{r}
+relu.val <- as.matrix(read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug30_nnvwb4_hidmat__jobid_3_576.csv"))
+znb <- as.matrix(read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug30_nnvwb4_zmat__jobid_3_576.csv"))
+age.val <- as.matrix(read.csv("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug30_nnvwb4_age__jobid_3_576.csv"))
+
+```
+
+```{r}
+lmtest<- fast_horseshoe_lm(c(age.val),znb) #This also gives the bias term
+```
