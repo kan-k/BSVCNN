@@ -1,14 +1,21 @@
 # R script
-#devtools::install_github("kangjian2016/PMS", force = TRUE) 
+
+#I have changed the way GPR is fitted 
+
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
+p_load(BayesGPfit)
 p_load(PMS)
 p_load(oro.nifti)
 p_load(neurobase)
 p_load(feather)
 p_load(glmnet)
 p_load(fastBayesReg)
+p_load(truncnorm)
 p_load(dplyr)
 
+##3 Dec with white matter, stem removed and thresholded
+
+print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
 dat_allmat<-as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/sim/sub_res3_dat.feather'))
@@ -43,8 +50,7 @@ age_tab <- as.data.frame(mapply(c,age_tab,as.data.frame(cbind(missing.unused.ind
 colnames(age_tab) <- c("id","age")
 
 age_tab <- age_tab[order(age_tab$id),]
-age <- age_tab$age
-
+dat.age <- age_tab$age
 
 print("stage 2")
 
@@ -84,46 +90,67 @@ rsqcal2<-function(old,new,ind.old,ind.new){
   out$outrmse <-round(sqrt(mean((y_new-ridge_pred_new)^2)),4)
   return(out)
 }
-
+norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
+time.train <-  Sys.time()
+poly_degree = 10
+a_concentration = 2 #picked so that it's in the middle of my nn grid search
+b_smoothness = 40#picked so that it's in the middle of my nn grid search
 
+
+nb <- find_brain_image_neighbors(img1, mask_subcor, radius=1)
+
+nb.centred<- apply(nb$maskcoords,2,norm.func)
+#get psi
+psi.mat.nb <- GP.eigen.funcs.fast(nb.centred, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
+#get lambda
+lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = b_smoothness, d = 3)
+#Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
+sqrt.lambda.nb <- sqrt(lambda.nb)
+bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
+
+print("before cbind")
+#Get design matrix
+z.nb <- cbind(1,t(bases.nb%*%t(dat_allmat)))
+print("after cbind")
+
+#subset data
 num_part<- 2000
 num_test<- 2000
 set.seed(4)
 ind.to.use <- get_ind(num_part,num_test)
-
+set.seed(NULL)
 ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
 ind.to.use <- list()
 ind.to.use$test <- unlist(ind.temp[2,])
 ind.to.use$train <- unlist(ind.temp[1,])
+#Tested.... doing set seed(4) get_ind is the same as loading sim_wb2_index
 
-set.seed(NULL)
-print("=====")
-print("==========")
-print("fitting hs")
+train_Y <- dat.age[ind.to.use$train]
+train_Z <- z.nb[ind.to.use$train,]
+test_Y <- dat.age[ind.to.use$test]
+test_img <- dat_allmat[ind.to.use$test,]
+test_Z <- z.nb[ind.to.use$test,]
+
+#get beta(v)
 time.train <-  Sys.time()
-lassofit <- fast_horseshoe_lm(X = cbind(1,as.matrix(dat_allmat[ind.to.use$train,])) ,y = age_tab$age[ind.to.use$train],mcmc_sample = 400L) #Change smaples to 400
+lassofit <- fast_horseshoe_lm(X = train_Z ,y =train_Y,mcmc_sample = 400L) #Change smaples to 400
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
-pred_prior<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$train, ])))#$mean
-pred_prior_new<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$test, ])))#$mean
+pred_prior<-predict_fast_lm(lassofit, train_Z )#$mean
+pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
-write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_coef_',JobId,'.feather'))
+write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_coef_',JobId,'.feather'))
 
-#Posterior Predictive Mean
-# pred_prior$mean
-# pred_prior_new$mean
 
-#MCMC s.d.
-# pred_prior$sd
-# pred_prior_new$sd
+
 
 #Posterior Predictive mean in-sampleMSE
 in.mse <- mean((pred_prior$mean-age_tab$age[ind.to.use$train])^2)
@@ -175,4 +202,4 @@ print(paste0('Proprtion of true lying within subject 95% prediction interval: ',
 cover.mat <- matrix(c(sum(stat.in.ig.true.covermod),sum(stat.out.ig.true.covermod),sum(stat.in.ig.true.covermod2),sum(stat.out.ig.true.covermod2)),ncol = 4)/2000*100
 colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
 
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug11_hsvwb_coverage_",JobId,".csv"), row.names = FALSE)
+write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug16_gpr_coverage_",JobId,".csv"), row.names = FALSE)
