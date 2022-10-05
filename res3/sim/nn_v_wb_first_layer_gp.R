@@ -42,13 +42,13 @@ partial.gp <- array(, dim = c(length(res3.mask.reg),p.dat,n.expan))
 for(i in res3.mask.reg){
   #Load region mask
   mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/sim_res3_mask_ROI_',i))
-  nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
+  invisible(capture.output(nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)))
   #Get the centre of the region
   nb.centre<- apply(nb$maskcoords,2,median)
   #Load full mask
   
   #get coord wrt full mask
-  nb.full <- find_brain_image_neighbors(img1, mask_subcor, radius=1)
+  invisible(capture.output(nb.full <- find_brain_image_neighbors(img1, mask_subcor, radius=1)))
   #Re-centre the coords wrt centre of ROI
   nb.full$maskcoords[,1] <- nb.full$maskcoords[,1] - nb.centre[1]
   nb.full$maskcoords[,2] <- nb.full$maskcoords[,2] - nb.centre[2]

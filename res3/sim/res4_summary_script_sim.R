@@ -1,6 +1,14 @@
-#Function for taking in multiple runs' predictions, and calculate MAE, MSE and R^2
+if (!require("pacman")) {install.packages("pacman");library(pacman)}
+p_load(BayesGPfit)
+p_load(PMS)
+p_load(oro.nifti)
+p_load(neurobase)
+p_load(feather)
+p_load(glmnet)
+p_load(fastBayesReg)
+p_load(truncnorm)
+p_load(dplyr)
 
-#calculating r^2
 rsqcal <- function(true,pred){
   RSS <-sum((true - pred)^2)
   TSS <- sum((true - mean(true))^2)
@@ -19,6 +27,7 @@ meanstats.sim<- function(filename, runs){
   
   num.run <- length(runs)
   for(i in runs){
+    print(paste0("Doing run: ",i))
     #Load in-sample
     dat.in <- as.data.frame(t(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/sim_',filename,'_inpred__jobid_',i,'.feather'))))
     dat.in <- tail(dat.in,2000)
@@ -70,14 +79,24 @@ meanstats.sim<- function(filename, runs){
 }
 
 
-# meanstats.sim("aug8_nnvwbig_a6",c(15,16,17,22,26,27,28,3,30,36,39,4,47,49,50,7,8))
+
 print("start=========")
-stat.ig <- meanstats.sim("sep7_nnig",c(10,12,13,17,24,29,30,6,7,9))
-write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sep7_sim_summary_ig.csv"))
+stat.ig <- meanstats.sim("res4_sep7_nnig",c(12,13,15,16,17,18,19,20,21,22,23,24,25,26,28,29,3,30,5,6,7,8,9))
+write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_sep7_res4_summary_ig2.csv"))
 print("=========IG DONE=========")
-stat.eb <-meanstats.sim("sep7_nneb2",  c(1,10,12,17,19,24,25,3,30,4,5,6))
-write.csv(stat.eb,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sep7_sim_summary_eb.csv"))
+
+stat.eb <-meanstats.sim("res4_sep7_nneb", c(1,10,14,15,18,22,23,26,28,3,5,6,9))
+write.csv(stat.eb,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_sep7_res4_summary_eb2.csv"))
 print("=========EB DONE=========")
-stat.vanilla <- meanstats.sim("sep7_nnvwb",c(12,13,15,16,18,19,20,21,23,24,25,28,29,3,4,8))
+stat.vanilla <- meanstats.sim("res4_sep7_nnvwb", c(10,11,13,15,16,17,19,20,21,23,24,25,26,27,28,29,4,7,9))
 print("=========van DONE=========")
-write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sep7_sim_summary_van.csv"))
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_sep7_res4_summary_van2.csv"))
+
+print(stat.ig)
+print(stat.eb)
+print(stat.vanilla)
+
+
+
+
+
