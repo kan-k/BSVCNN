@@ -73,3 +73,7 @@ cort.temp[cort.temp>0][dat_colmeans<0.1] <- 0
 cort.temp@datatype = 2
 cort.temp@bitpix = 8
 writeNIfTI(cort.temp,'/well/nichols/users/qcv214/bnn2/HO_Combined/thres') #Correct
+
+##For testing 13 sep
+hoc  <- oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/HO_Combined/thres.nii.gz')
+
