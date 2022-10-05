@@ -18,11 +18,12 @@ for(e in c(25,50,70)){
 }
 
 
-seed<-45
+# seed<-45
+seed <- 23
 sal.thresh <- 0.005
 for(e in c(25,50,70)){
-  temp.sal <- abs(oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/viz/saliency_mean_seed_',seed,"_epoch_",e,".nii.gz")))
-  writeNIfTI(temp.sal,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/saliency_abs_mean_seed_',seed,"_epoch_",e))
+  temp.sal <- abs(oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/viz/sep7saliency_mean_seed_',seed,"_epoch_",e,".nii.gz")))
+  writeNIfTI(temp.sal,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/sep7saliency_abs_mean_seed_',seed,"_epoch_",e))
   # print(sum(c(temp.sal)>0))
   sal.masked <- c(temp.sal)[(c(temp.sal)>0)]
   print(round(sum(sal.masked>0.005)/length(sal.masked)*100,3))

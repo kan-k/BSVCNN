@@ -71,3 +71,14 @@ meanstats.re<- function(filename, runs){
 
 
 # meanstats.re("aug8_nnvwbig_a6",c(15,16,17,22,26,27,28,3,30,36,39,4,47,49,50,7,8))
+print("start=========")
+stat.ig <- meanstats.re("sep7_nnig4",c(12,14,17,21,3,31,36,4,7))
+write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_summary_ig.csv"))
+print("=========IG DONE=========")
+stat.eb <-meanstats.re("sep7_nneb2", c(17,31,35,40,42,46))
+write.csv(stat.eb,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_summary_eb.csv"))
+print("=========EB DONE=========")
+stat.vanilla <- meanstats.re("sep7_nnvwb2",c(12,17,18,24,25,27,28,29,8,9))
+print("=========van DONE=========")
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_summary_van.csv"))
+

@@ -78,16 +78,16 @@ meanstats.re<- function(filename, runs){
 
 
 print("start=========")
-stat.ig <- meanstats.re("res4_aug26_nnvwbig_a6",c(10,2,21,24,25,26,27,29,3,36,39,43,44,45,47,48,5,7,8,9))
-write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_res4_summary_ig.csv"))
+stat.ig <- meanstats.re("res4_sep7_nnig",c(12,13,15,22,24,25,3,30,4,5))
+write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_sep7res4_summary_ig.csv"))
 print("=========IG DONE=========")
 
-stat.eb <-meanstats.re("res4_aug26_nnvwbbayes_initvar", c(1,14,15,19,2,28,30,31,37,38,45,46,50,6,7,8,9))
-write.csv(stat.eb,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_res4_summary_eb.csv"))
+stat.eb <-meanstats.re("sep7_nneb", c(11,5,7))
+write.csv(stat.eb,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_sep7res4_summary_eb.csv"))
 print("=========EB DONE=========")
-stat.vanilla <- meanstats.re("res4_aug26_nnvwb4", c(1,15,17,19,2,20,21,24,25,3,32,37,39,42,46,47,5,6,9))
+stat.vanilla <- meanstats.re("res4_sep7_nnvwb", c(1,11,15,17,18,19,22,24,26,27,28,29))
 print("=========van DONE=========")
-write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_res4_summary_van.csv"))
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_sep7res4_summary_van.csv"))
 
 print(stat.ig)
 print(stat.eb)
