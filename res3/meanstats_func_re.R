@@ -7,7 +7,6 @@ rsqcal <- function(true,pred){
   return(1 - RSS/TSS)
 }
 
-
 meanstats.re<- function(filename, runs){
   in.rmse.vec<- vector(mode="numeric")
   in.mae.vec<- vector(mode="numeric")
@@ -69,8 +68,7 @@ meanstats.re<- function(filename, runs){
   return(out)
 }
 
-
-# meanstats.re("aug8_nnvwbig_a6",c(15,16,17,22,26,27,28,3,30,36,39,4,47,49,50,7,8))
+meanstats.re("aug8_nnvwbig_a6",c(15,16,17,22,26,27,28,3,30,36,39,4,47,49,50,7,8))
 print("start=========")
 stat.ig <- meanstats.re("sep7_nnig4",c(12,14,17,21,3,31,36,4,7))
 write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_summary_ig.csv"))
