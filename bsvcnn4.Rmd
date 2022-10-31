@@ -15508,9 +15508,1290 @@ These are indeed default mode network
 
 
 
+#22 Oct
+
+##Plot stgp
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:10
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_stgp_lr5_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <-1:10
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_stgp_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- 1:10
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_stgp_lr0005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- 1:10
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_stgp_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("stgp, lr5")
+                             ,paste0("stgp, lr005")
+                             ,paste0("gpnn, lr0005")
+                             ,paste0("gpnn, lr00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+##Plot gpnn
+```{r}
+#GPNN
+num.it <-80*4
+runs <- c(12,16,17,24,28,3,4,5,9)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct21_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <- c(12,16,17,24,28,3,4,5,9)
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct21_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- c(11,12,15,18,21,27,3,7,8)
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct21_gpnn_lr0005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- c(1,12,15,2,21,23,25,27,5,7)
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct21_gpnn_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("gpnn, lr005")
+                             ,paste0("gpnn, lr005")
+                             ,paste0("gpnn, lr0005")
+                             ,paste0("gpnn, lr00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+##Plot GPR
+Test gpr against truth
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_gpr_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPR Prediction", xlab = "Truth", main = "Out-of-sample GPR against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+
+Coverage & Accuracy
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_gpr_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_gpr_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
+
+##Plot HSP
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_hsvwb_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="HSP Prediction", xlab = "Truth", main = "Out-of-sample HSP against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+`summary()` gives min =2.99, max = 10.09, so more variety than gpr
+Coverage & Performance
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_hsvwb_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_hsvwb_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
+##Predictions
+
+###In-sample
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$train]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_hsvwb_inpred_noscale_",1,".csv")))
+gpr.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_gpr_inpred_noscale_",1,".csv")))
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_stgp_lr00005_inpred__jobid_1.feather'))
+stgp.pred.train <- tail(pred.test[2,],1611)
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct21_gpnn_lr00005_inpred__jobid_1.feather'))
+gpnn.pred.train <- tail(pred.test[2,],1611)
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="FI Prediction", xlab = "True FI", main = "In-sample Predictions against Truth",lwd=0.5, ylim=c(0,13),xlim=c(0,13))
+lines(x=wb2.pred.train, y=gpr.pred.train, type = "p", col='blue',pch=2,lwd=0.5)
+lines(x=wb2.pred.train, y=stgp.pred.train, type = "p", col='darkgreen',pch=3,lwd=0.5)
+lines(x=wb2.pred.train, y=gpnn.pred.train, type = "p", col='magenta',pch=4,lwd=0.5)
+
+abline(a=0,b=1,lwd=2,col="red")
+abline(h=mean(age_tab$fi[ind.to.use$train]),lwd=1,col="orange")
+
+# abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("HSP","GPR","STGP",'GPNN',"y=x, m=1"),col=c("black","blue","darkgreen",'magenta',"red"), pch = c(1,2,3,4,15))
+```
+###Out-of-sample
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_hsvwb_outpred_noscale_",1,".csv")))
+gpr.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_gpr_outpred_noscale_",1,".csv")))
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct19_stgp_lr00005_outpred__jobid_1.feather'))
+stgp.pred.train <- tail(pred.test[2,],1642)
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct21_gpnn_lr00005_outpred__jobid_1.feather'))
+gpnn.pred.train <- tail(pred.test[2,],1642)
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="FI Prediction", xlab = "True FI", main = "Out-of-sample Predictions against Truth",lwd=0.5, ylim=c(0,13),xlim=c(0,13))
+lines(x=wb2.pred.train, y=gpr.pred.train, type = "p", col='blue',pch=2,lwd=0.5)
+lines(x=wb2.pred.train, y=stgp.pred.train, type = "p", col='darkgreen',pch=3,lwd=0.5)
+lines(x=wb2.pred.train, y=gpnn.pred.train, type = "p", col='magenta',pch=4,lwd=0.5)
+
+abline(a=0,b=1,lwd=2,col="red")
+abline(h=mean(age_tab$fi[ind.to.use$train]),lwd=1,col="orange")
+
+# abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("HSP","GPR","STGP",'GPNN',"y=x, m=1"),col=c("black","blue","darkgreen",'magenta',"red"), pch = c(1,2,3,4,15))
+```
+
+
+#23 Oct
+
+##Note that all of the above for FI with Default Mode Network (dfn) is just without thresholding
+I will do thresholding on `dfn_get_mask`
+
+#24 Oct
+##Plot GPR
+Test gpr against truth
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpr_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPR Prediction", xlab = "Truth", main = "Out-of-sample GPR against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+
+Coverage & Accuracy
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpr_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpr_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
+
+##Plot HSP
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_hsvwb_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="HSP Prediction", xlab = "Truth", main = "Out-of-sample HSP against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+`summary()` gives min =2.99, max = 10.09, so more variety than gpr
+Coverage & Performance
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_hsvwb_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_hsvwb_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
+
+#25 Oct
+
+##Plot stgp
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:10
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_stgp_lr5_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <-1:10
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_stgp_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- 1:10
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_stgp_lr0005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- 1:10
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_stgp_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 0.5")
+                             ,paste0("lr= 005")
+                             ,paste0("lr= 0005")
+                             ,paste0("lr= 00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+##Plot gpnn
+```{r}
+#GPNN
+num.it <-80*4
+runs <- c(10,11,12,2,20,21,24,26,3,4,6)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <- c(10,11,12,2,20,21,24,26,3,4,6)
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- c(14,17,20,24,26,27,30,6,7)
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpnn_lr0005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- c(11,21,22,24,25,29,3,6,9)
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpnn_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 005")
+                             ,paste0("lr= 005")
+                             ,paste0("lr= 0005")
+                             ,paste0("lr= 00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+##Predictions
+
+###In-sample
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$train]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_hsvwb_inpred_noscale_",1,".csv")))
+gpr.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpr_inpred_noscale_",1,".csv")))
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_stgp_lr00005_inpred__jobid_1.feather'))
+stgp.pred.train <- tail(pred.test[2,],1611)
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpnn_lr00005_inpred__jobid_11.feather'))
+gpnn.pred.train <- tail(pred.test[2,],1611)
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="FI Prediction", xlab = "True FI", main = "In-sample Predictions against Truth",lwd=0.5, ylim=c(0,13),xlim=c(0,13))
+lines(x=wb2.pred.train, y=gpr.pred.train, type = "p", col='blue',pch=2,lwd=0.5)
+lines(x=wb2.pred.train, y=stgp.pred.train, type = "p", col='darkgreen',pch=3,lwd=0.5)
+lines(x=wb2.pred.train, y=gpnn.pred.train, type = "p", col='magenta',pch=4,lwd=0.5)
+
+abline(a=0,b=1,lwd=2,col="red")
+abline(h=mean(age_tab$fi[ind.to.use$train]),lwd=1,col="orange")
+
+# abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("HSP","GPR","STGP",'GPNN',"y=x, m=1"),col=c("black","blue","darkgreen",'magenta',"red"), pch = c(1,2,3,4,15))
+```
+###Out-of-sample
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_hsvwb_outpred_noscale_",1,".csv")))
+gpr.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpr_outpred_noscale_",1,".csv")))
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_stgp_lr00005_outpred__jobid_1.feather'))
+stgp.pred.train <- tail(pred.test[2,],1642)
+pred.test <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct24_gpnn_lr00005_outpred__jobid_11.feather'))
+gpnn.pred.train <- tail(pred.test[2,],1642)
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="FI Prediction", xlab = "True FI", main = "Out-of-sample Predictions against Truth",lwd=0.5, ylim=c(0,13),xlim=c(0,13))
+lines(x=wb2.pred.train, y=gpr.pred.train, type = "p", col='blue',pch=2,lwd=0.5)
+lines(x=wb2.pred.train, y=stgp.pred.train, type = "p", col='darkgreen',pch=3,lwd=0.5)
+lines(x=wb2.pred.train, y=gpnn.pred.train, type = "p", col='magenta',pch=4,lwd=0.5)
+
+abline(a=0,b=1,lwd=2,col="red")
+abline(h=mean(age_tab$fi[ind.to.use$train]),lwd=1,col="orange")
+
+# abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("HSP","GPR","STGP",'GPNN',"y=x, m=1"),col=c("black","blue","darkgreen",'magenta',"red"), pch = c(1,2,3,4,15))
+```
+
+#27 Oct
+New mask thresholded using s.d. with 125k voxels
+##Plot stgp
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:30
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr5_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <-1:30
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- 1:30
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr0005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- 1:30
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 0.5")
+                             ,paste0("lr= 005")
+                             ,paste0("lr= 0005")
+                             ,paste0("lr= 00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=4, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+##Plot gpnn
+```{r}
+#GPNN
+num.it <-80*4
+runs <- c(11,14,17,20,22,24)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <- c(11,14,17,20,22,24)
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- c(1,12,14,15,17,18,26,27,28,5)
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpnn_lr0005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- c(1,12,13,14,16,18,20,22,25,26,29,7,8)
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpnn_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 005")
+                             ,paste0("lr= 005")
+                             ,paste0("lr= 0005")
+                             ,paste0("lr= 00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+lr doesn't have much effect
 
 
 
+##Observe effects of threshold in STGP
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:5
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th25_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <-1:5
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th45_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj sigma and bias
+runs3 <- 1:5
+res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+for(i in runs3){
+  res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th75_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- 1:5
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th100_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("threshold= 0.25")
+                             ,paste0("threshold= 0.45")
+                             ,paste0("threshold= 0.75")
+                             ,paste0("threshold= 1"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=4, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+```
+
+Consider only 2 extreme
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:5
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th25_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+# runs2 <-1:5
+# res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+# for(i in runs2){
+#   res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th45_loss__jobid_",i,".csv")))[,1:num.it]
+# }
+# #GPNN adj sigma and bias
+# runs3 <- 1:5
+# res.mat3 <- array(,dim=c(2,length(runs3),num.it))
+# for(i in runs3){
+#   res.mat3[,which(i==runs3),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th75_loss__jobid_",i,".csv")))[,1:num.it]
+# }
+# stgp
+runs4 <- 1:5
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th100_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("threshold= 0.25")
+                             # ,paste0("threshold= 0.45")
+                             # ,paste0("threshold= 0.75")
+                             ,paste0("threshold= 1"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=4, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+# res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+# lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l',lty=2)
+# lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+# lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+# 
+# res.iqr3 <- apply(res.mat3[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+# lines(x = 1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=1, type = 'l',lty=2)
+# lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+# lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+# res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+# lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+# lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+# lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+# 
+# res.iqr3 <- apply(res.mat3[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+# lines(x =1:num.it,y=sqrt(res.iqr3[2,]),col='darkgreen',lwd=2, type = 'l')
+# lines(x=1:num.it,y=sqrt(res.iqr3[1,]),col='green',lwd=0.5)
+# lines(x=1:num.it,y=sqrt(res.iqr3[3,]),col='green',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red"
+                                                 # ,'blue','darkgreen'
+                                                 ,'orange'))
+```
+
+STGP with threshold = 1 has lower test than train.
+
+##Plot GPR
+Test gpr against truth
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPR Prediction", xlab = "Truth", main = "Out-of-sample GPR against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+
+Coverage & Accuracy
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
+
+##Plot HSP
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="HSP Prediction", xlab = "Truth", main = "Out-of-sample HSP against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+`summary()` gives min =2.99, max = 10.09, so more variety than gpr
+Coverage & Performance
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
 
 
+#28 Oct
 
+##GPR-Normal
+Test gpr against truth
+```{r}
+ind.to.use<- list()
+ind.to.use$train <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+ind.to.use$test <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+wb2.pred.train <- age_tab$fi[ind.to.use$test]
+hs.pred.train <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_outpred_noscale_",1,".csv")))
+
+plot(y=hs.pred.train, x = wb2.pred.train, ylab="GPR Prediction", xlab = "Truth", main = "Out-of-sample GPR against Truth")
+abline(a=0,b=1,lwd=2,col="red")
+abline(lm(hs.pred.train ~ wb2.pred.train), col = "blue")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 2)      # Grid line width
+legend("bottomright", legend = c("y=x, m=1", paste0("fitted, m=", round(coef(lm(hs.pred.train ~ wb2.pred.train))[2],2))),col=c("red","blue"), lty = 1)
+```
+
+Coverage & Accuracy
+```{r}
+hs.int<-matrix(,nrow=20,ncol=4)
+for(i in 1:20){
+  hs.int[i,] <- unlist(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_coverage_",i,".csv")))
+}
+colMeans(hs.int)
+
+hs.int<-matrix(,nrow=20,ncol=13)
+for(i in 1:20){
+  hs.int[i,] <- t(as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_noscale_",i,".csv"))))
+}
+print(c("inR2","inMAE","outR2","outMAE","inRMSE","outRMSE"))
+signif(colMeans(hs.int[,1:6]),3)
+ library(matrixStats)
+signif(sqrt(colVars(hs.int[,1:6])),3)
+```
+
+##GPNN-Normal
+```{r}
+#GPNN
+num.it <-80*4
+runs <-  c(11,21,22,24,25,29,3,6,9)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile//re_oct24_gpnn_lr00005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+
+runs4 <- 1:25
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gpnnnm_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("GPNN")
+                             ,paste0("GPNN-normal"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=4, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','darkgreen','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red"
+                                                 # ,'blue','darkgreen'
+                                                 ,'orange'))
+```
+
+#31 oct
+Producing previous plots for presentation
+##GPNN
+```{r}
+#GPNN
+num.it <-80*4
+runs <- c(11,14,17,20,22,24)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpnn_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+
+# stgp
+runs4 <- c(1,12,13,14,16,18,20,22,25,26,29,7,8)
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpnn_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 0.005"),paste0("lr= 0.00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'orange'))
+```
+##Plot stgp
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:30
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+# stgp
+runs4 <- 1:30
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr00005_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 0.005"),paste0("lr= 0.00005"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=4, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'orange'))
+```
+##Observe effects of threshold in STGP
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:5
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th25_loss__jobid_",i,".csv")))[,1:num.it]
+}
+# stgp
+runs4 <- 1:5
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th100_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("threshold= 0.25"),paste0("threshold= 1"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'orange'))
+```
+
+##All stgp with th
+##Plot stgp
+```{r}
+#GPNN
+num.it <-80*4
+runs <- 1:30
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+#GPNN adj 
+runs2 <-1:30
+res.mat2 <- array(,dim=c(2,length(runs2),num.it))
+for(i in runs2){
+  res.mat2[,which(i==runs2),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_stgp_lr00005_loss__jobid_",i,".csv")))[,1:num.it]
+}
+
+# stgp
+runs4 <- 1:5
+res.mat4 <- array(,dim=c(2,length(runs4),num.it))
+for(i in runs4){
+  res.mat4[,which(i==runs4),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_stgp_th100_loss__jobid_",i,".csv")))
+}
+
+#define legends
+leglab <- c(paste0("lr= 0.005, thr= 0.25")
+                             ,paste0("lr= 0.00005, thr= 0.25")
+                             ,paste0("lr= 0.00005, thr= 1"))
+
+#Test
+res.iqr <- apply(res.mat[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x=1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Test RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=1, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+res.iqr4 <- apply(res.mat4[2,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','orange'))
+ 
+#Train
+res.iqr <- apply(res.mat[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+plot(x =1:num.it,y=sqrt(res.iqr[2,]),col='red',lwd=2, type = 'l',main = "Train RMSE", ylab="RMSE", xlab="iteration",ylim=c(1.85,2.4))
+lines(x=1:num.it,y=sqrt(res.iqr[1,]),col='pink',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr[3,]),col='pink',lwd=0.5)
+res.iqr2 <- apply(res.mat2[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr2[2,]),col='blue',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr2[1,]),col='lightblue',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr2[3,]),col='lightblue',lwd=0.5)
+
+res.iqr4 <- apply(res.mat4[1,,], MARGIN = 2, FUN = quantile, probs= c(0.25,0.5,0.75))
+lines(x = 1:num.it,y=sqrt(res.iqr4[2,]),col='orange',lwd=2, type = 'l')
+lines(x=1:num.it,y=sqrt(res.iqr4[1,]),col='yellow',lwd=0.5)
+lines(x=1:num.it,y=sqrt(res.iqr4[3,]),col='yellow',lwd=0.5)
+grid(nx = NULL, ny = NULL,lty = 2,  col = "gray",lwd = 2)   
+
+legend('topright',legend = leglab,lty=c(1),col=c("red",'blue','orange'))
+```
