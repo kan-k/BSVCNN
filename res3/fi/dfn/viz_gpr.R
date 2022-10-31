@@ -107,69 +107,17 @@ test_Z <- z.nb[ind.to.use$test,]
 time.train <-  Sys.time()
 lassofit <- fast_horseshoe_lm(X = train_Z ,y =train_Y,mcmc_sample = 1000L) #Change smaples to 400
 time.taken <- Sys.time() - time.train
-cat("Training complete in: ", time.taken)
-pred_prior<-predict_fast_lm(lassofit, train_Z )#$mean
-pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 
-write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
-####Result to use
-write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_coef_',JobId,'.feather'))
+beta_fit <- data.frame(HS = crossprod(bases.nb,lassofit$post_mean$betacoef[-1]))
+
+gp.mask.hs <- mask.com
 
 
+gp.mask.hs[gp.mask.hs!=0] <-abs(beta_fit$HS)
+
+gp.mask.hs@datatype = 16
+gp.mask.hs@bitpix = 32
 
 
-#Posterior Predictive mean in-sampleMSE
-in.mse <- mean((pred_prior$mean-age_tab$fi[ind.to.use$train])^2)
+writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/viz/gpr'))
 
-#######In-sample################################################
-stat.in.ig.stderrmod <- sqrt(in.mse+pred_prior$sd^2)
-stat.in.ig.lwrmod <- pred_prior$mean - qt(0.975,1000-1)*stat.in.ig.stderrmod
-stat.in.ig.uprmod <- pred_prior$mean + qt(0.975,1000-1)*stat.in.ig.stderrmod
-##for no personalised variance
-stat.in.ig.lwrmod2 <- pred_prior$mean - qt(0.975,1000-1)*sqrt(in.mse)
-stat.in.ig.uprmod2 <- pred_prior$mean + qt(0.975,1000-1)*sqrt(in.mse)
-
-#Define proportion counting
-
-#True
-within.pred <- vector(mode='numeric')
-within.pred2 <- vector(mode='numeric')
-for(i in 1:length(age_tab$fi[ind.to.use$train])){
-  within.pred <- c(within.pred,(between(age_tab$fi[ind.to.use$train][i],stat.in.ig.lwrmod[i],stat.in.ig.uprmod[i])))
-  within.pred2 <- c(within.pred2,(between(age_tab$fi[ind.to.use$train][i],stat.in.ig.lwrmod2[i],stat.in.ig.uprmod2[i])))
-}
-stat.in.ig.true.covermod <- within.pred
-stat.in.ig.true.covermod2 <- within.pred2
-
-print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.in.ig.true.covermod)/1611*100))
-
-#######Out-of-sample################################################
-stat.out.ig.stderrmod <- sqrt(in.mse+pred_prior_new$sd^2)
-stat.out.ig.lwrmod <- pred_prior_new$mean - qt(0.975,1000-1)*stat.out.ig.stderrmod
-stat.out.ig.uprmod <- pred_prior_new$mean + qt(0.975,1000-1)*stat.out.ig.stderrmod
-##for no personalised variance
-stat.out.ig.lwrmod2 <- pred_prior_new$mean - qt(0.975,1000-1)*sqrt(in.mse)
-stat.out.ig.uprmod2 <- pred_prior_new$mean + qt(0.975,1000-1)*sqrt(in.mse)
-
-#Define proportion counting
-
-#True
-within.pred <- vector(mode='numeric')
-within.pred2 <- vector(mode='numeric')
-for(i in 1:length(age_tab$fi[ind.to.use$test])){
-  within.pred <- c(within.pred,(between(age_tab$fi[ind.to.use$test][i],stat.out.ig.lwrmod[i],stat.out.ig.uprmod[i])))
-  within.pred2 <- c(within.pred2,(between(age_tab$fi[ind.to.use$test][i],stat.out.ig.lwrmod2[i],stat.out.ig.uprmod2[i])))
-  
-}
-stat.out.ig.true.covermod <- within.pred
-stat.out.ig.true.covermod2 <- within.pred2
-print(paste0('Proprtion of true lying within subject 95% prediction interval: ',sum(stat.out.ig.true.covermod)/1642*100))
-
-cover.mat <- matrix(c(sum(stat.in.ig.true.covermod)/1611,sum(stat.out.ig.true.covermod)/1642,sum(stat.in.ig.true.covermod2)/1611,sum(stat.out.ig.true.covermod2)/1642),ncol = 4)*100
-colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
-
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_coverage_",JobId,".csv"), row.names = FALSE)

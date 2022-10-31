@@ -17,7 +17,7 @@ a_vec  <- c(1,2,3,4,5)
 b_vec  <- c(30,40,50,60,70,80,90,100)
 param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(mask_subcor)),0))
 masked.reg <- mask_subcor[mask_subcor>0]
 #load preset
@@ -40,7 +40,7 @@ a_vec  <- c(1,2,3,4,5)
 b_vec  <- c(30,40,50,60,70,80,90,100)
 param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(mask_subcor)),0))
 masked.reg <- mask_subcor[mask_subcor>0]
 #load preset
@@ -59,7 +59,7 @@ for(i in sort(res3.mask.reg)){
 partial.gp <- array(, dim = c(length(res3.mask.reg),p.dat,n.expan))
 for(i in res3.mask.reg){
   #Load region mask
-  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',i))
+  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/dfn_mask_ROI_',i))
   invisible(capture.output(nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)))
   #Get the centre of the region
   nb.centre<- apply(nb$maskcoords,2,median)
@@ -115,7 +115,7 @@ for(i in res3.mask.reg){
 
 gs.opt <- matrix(,ncol=2,nrow = length(res3.mask.reg))
 for(i in sort(res3.mask.reg)){
-  gs.opt[which(i==(res3.mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/gs12oct_ROI_",i,".csv")))
+  gs.opt[which(i==(res3.mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/dfn_gs19oct_ROI_",i,".csv")))
 }
 
 # bases.nb.temp <- matrix(,ncol=1,nrow= choose(max(deg_vec)+dimension,dimension))
@@ -125,7 +125,7 @@ for(i in sort(res3.mask.reg)){
 partial.gp <- array(, dim = c(length(res3.mask.reg),p.dat,n.expan))
 for(i in res3.mask.reg){
   #Load region mask
-  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',i))
+  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/dfn_mask_ROI_',i))
   invisible(capture.output(nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)))
   #Get the centre of the region
   nb.centre<- apply(nb$maskcoords,2,median)

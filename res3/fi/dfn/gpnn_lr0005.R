@@ -1,10 +1,6 @@
 # R script
 
-#7 sep, make sigma variable
-
-
-#Change num epochs to 170
-#var(age) = 35, perhaps let tau^2 = 1.5?
+#13 oct FI GPNN
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
@@ -19,11 +15,10 @@ p_load(truncnorm)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "oct26_stgp_lr5"
+filename <- "oct26_gpnn_lr0005"
 prior.var <- 0.05
-learning_rate <- 0.5 #for slow decay starting less than 1
+learning_rate <- 0.0005 #for slow decay starting less than 1
 prior.var.bias <- 1
-st <- 0.25
 sig.lr <- learning_rate
 epoch <- 80
 
@@ -60,9 +55,6 @@ relu.prime <- function(x) sapply(x, function(z) 1.0*(z>0))
 
 #Define Mean Squared Error
 mse <- function(pred, true){mean((pred-true)^2)}
-
-#Define STGP
-stgp <- function(x){sign(x)*max(0,abs(x)-st)}
 
 #Losses
 loss.train <- vector(mode = "numeric")
@@ -119,7 +111,6 @@ batch_size <- 500
 #NN parameters
 it.num <- 1
 
-
 #Fix prior var to be 0.1
 # prior.var <- 1.5
 y.sigma <- var(age[train.test.ind$train])
@@ -139,8 +130,6 @@ weights <- matrix(, ncol = p.dat, nrow = n.mask)
 for(i in res3.mask.reg){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
-weights <- matrix(sapply(weights,stgp),ncol = p.dat)
-
 #Initialising bias (to 0)
 bias <- rnorm(n.mask)
 
@@ -157,22 +146,24 @@ for(e in 1:epoch){
   time.epoch <-  Sys.time()
   #Start batch
   for(b in 1:num.batch){
+    
     minibatch.size <- length(mini.batch$train[[b]])
+    
     print(paste0("Epoch: ",e, ", batch number: ", b))
     #3 Feed it to next layer
     
-    hidden.layer <- matrix(,nrow= minibatch.size,ncol = n.mask)
+    hidden.layer <- matrix(,nrow=minibatch.size,ncol = n.mask)
     for(i in 1:n.mask){
       temp.mul <- (res3.dat[mini.batch$train[[b]], ]  %*% weights[i,]) + bias[i] #Will yield a batch_size x 1 + bias of that region
       #Activate by ReLU and save to hidden layer
       hidden.layer[,i] <- relu(temp.mul) #will yield a vector, not matrix
     }
     #Hidden layer
-    fit.lm <- lm(age[mini.batch$train[[b]]] ~ hidden.layer) #OLS Regress on the minibatch
-    beta_fit <- coefficients(fit.lm)
-    beta_fit[is.na(beta_fit)] <- 0
+    z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
+    hs_fit_SOI <- fast_horseshoe_lm(age[mini.batch$train[[b]]],z.nb) #This also gives the bias term
+    beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
     #Output layer
-    hs_in.pred_SOI <- cbind(1,hidden.layer)%*%beta_fit
+    hs_in.pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer %*%beta_fit$HS
     loss.train <- c(loss.train, mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]))
     pred.train.ind <- c(pred.train.ind,mini.batch$train[[b]]) 
     pred.train.val <- c(pred.train.val,hs_in.pred_SOI)
@@ -186,7 +177,7 @@ for(e in 1:epoch){
       hidden.layer.test[,i] <- relu(temp.mul.test)
     }
     #Loss calculation
-    hs_pred_SOI <- cbind(1,hidden.layer.test)%*%beta_fit
+    hs_pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer.test %*%beta_fit$HS
     loss.val <- c(loss.val, mse(hs_pred_SOI,age[train.test.ind$test]))
     pred.test.ind <- c(pred.test.ind,train.test.ind$test) 
     pred.test.val <- c(pred.test.val,hs_pred_SOI) 
@@ -198,21 +189,19 @@ for(e in 1:epoch){
     grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
     
     #Update weight
-    grad <- array(,dim = c( minibatch.size,dim(theta.matrix)))
+    grad <- array(,dim = c(minibatch.size,dim(theta.matrix)))
     for(j in 1:nrow(theta.matrix)){ #nrow of theta.matrix = n.mask
-      grad[,j,] <- -1/y.sigma*c(grad.loss)*beta_fit[j+1]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
+      grad[,j,] <- -1/y.sigma*c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
     }
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
-    
     #####
     print(summary(c(grad.m)))
     #####
-    
     #Update bias
-    grad.b <- matrix(,nrow =  minibatch.size,ncol = n.mask)
+    grad.b <- matrix(,nrow = minibatch.size,ncol = n.mask)
     for(j in 1:n.mask){
-      grad.b[,j] <- -1/y.sigma*c(grad.loss)*beta_fit[j+1]*c(relu.prime(hidden.layer[,j]))
+      grad.b[,j] <- -1/y.sigma*c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))
     }
     #Take batch average
     grad.b.m <- c(apply(grad.b, c(2), mean))
@@ -235,7 +224,7 @@ for(e in 1:epoch){
     for(i in res3.mask.reg){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
-    weights <- matrix(sapply(weights,stgp),ncol = p.dat)
+    
     it.num <- it.num +1
     # learning_rate <- learning_rate
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
@@ -248,7 +237,7 @@ for(e in 1:epoch){
   # if(e %in% c(25,50,80)){
   #   salient.mat <- matrix(,nrow=length(train.test.ind$train), ncol = p.dat)
   #   for(o in train.test.ind$train){
-  #     salient.mat[which(o==train.test.ind$train),]<- c(beta_fit[-1] %*% (relu.prime(bias+weights%*%res3.dat[o,])*weights))
+  #     salient.mat[which(o==train.test.ind$train),]<- c(beta_fit$HS %*% (relu.prime(bias+weights%*%res3.dat[o,])*weights))
   #   }
   #   write_feather(as.data.frame(salient.mat),paste0('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_saliencymatrix_seed_',JobId,"_epoch_",e))
   # }

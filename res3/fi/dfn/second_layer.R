@@ -14,7 +14,7 @@ p_load(truncnorm)
 print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
 mask.reg <- sort(setdiff(unique(c(mask_subcor)),c(0)))
 
 #load preset

@@ -19,9 +19,9 @@ p_load(truncnorm)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "oct26_stgp_lr5"
+filename <- "oct26_stgp_lr0005"
 prior.var <- 0.05
-learning_rate <- 0.5 #for slow decay starting less than 1
+learning_rate <- 0.0005 #for slow decay starting less than 1
 prior.var.bias <- 1
 st <- 0.25
 sig.lr <- learning_rate

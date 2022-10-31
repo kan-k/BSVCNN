@@ -12,20 +12,19 @@ p_load(truncnorm)
 print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
 mask.reg <- sort(setdiff(unique(c(mask_subcor)),c(0)))
 thres <- min(length(mask.reg),100)
 mask.reg.part<-split(mask.reg, sort(mask.reg%%thres))
 #load preset
 part_use<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id.csv')$x
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
 img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1],'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
 
 #load age
 #data
 list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use,'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz')
 
-dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask'))
+dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask'))
 #Age
 age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
 dat.age <- age_tab$fi
@@ -93,12 +92,12 @@ for(k in mask.reg.part[[JobId]]){
   param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
   
   
-  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/mask_ROI_',k))
+  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/dfn_mask_ROI_',k))
   nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)
   #Get the centre of the region
   nb.centre<- apply(nb$maskcoords,2,median)
   #Load full mask
-  mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+  mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
   #get coord wrt full mask
   nb.full <- find_brain_image_neighbors(img1, mask_subcor, radius=1)
   #Re-centre the coords wrt centre of ROI

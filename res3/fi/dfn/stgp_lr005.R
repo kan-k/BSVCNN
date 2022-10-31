@@ -19,7 +19,7 @@ p_load(truncnorm)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "oct19_stgp_lr005"
+filename <- "oct26_stgp_lr005"
 prior.var <- 0.05
 learning_rate <- 0.005 #for slow decay starting less than 1
 prior.var.bias <- 1
@@ -77,12 +77,12 @@ print("Loading data")
 
 #Load data and mask and GP 
 #mask
-res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(res3.mask)),0))
 #data
 part_use<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id.csv')$x
 list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use,'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz')
-res3.dat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask'))
+res3.dat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask'))
 
 #Age
 age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')

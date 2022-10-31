@@ -19,9 +19,9 @@ p_load(truncnorm)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "oct26_stgp_lr5"
+filename <- "oct27_stgp_th25"
 prior.var <- 0.05
-learning_rate <- 0.5 #for slow decay starting less than 1
+learning_rate <- 0.00005 #for slow decay starting less than 1
 prior.var.bias <- 1
 st <- 0.25
 sig.lr <- learning_rate
@@ -245,13 +245,17 @@ for(e in 1:epoch){
   print(paste0("epoch: ",e," out of ",epoch, ", time taken for this epoch: ",Sys.time() -time.epoch))
   print(paste0("sigma^2: ",y.sigma))
   
-  # if(e %in% c(25,50,80)){
-  #   salient.mat <- matrix(,nrow=length(train.test.ind$train), ncol = p.dat)
-  #   for(o in train.test.ind$train){
-  #     salient.mat[which(o==train.test.ind$train),]<- c(beta_fit[-1] %*% (relu.prime(bias+weights%*%res3.dat[o,])*weights))
-  #   }
-  #   write_feather(as.data.frame(salient.mat),paste0('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_saliencymatrix_seed_',JobId,"_epoch_",e))
-  # }
+  if(e %in% c(25,50,80)){
+    salient.mat <- matrix(,nrow=length(train.test.ind$train), ncol = p.dat)
+    for(o in train.test.ind$train){
+      salient.mat[which(o==train.test.ind$train),]<- c(beta_fit[-1] %*% (relu.prime(bias+weights%*%res3.dat[o,])*weights))
+      }
+      gp.mask.hs <- res3.mask
+      gp.mask.hs[gp.mask.hs!=0] <- abs(colMeans(salient.mat))
+      gp.mask.hs@datatype = 16
+      gp.mask.hs@bitpix = 32
+      writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/viz/',filename,'_sal_',JobId,"_epoch_",e))
+    }
 }
 
 time.taken <- Sys.time() - time.train

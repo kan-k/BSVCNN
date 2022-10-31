@@ -1,49 +1,48 @@
 # R script
-#devtools::install_github("kangjian2016/PMS", force = TRUE) 
+
+#I have changed the way GPR is fitted 
+
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
+p_load(BayesGPfit)
 p_load(PMS)
 p_load(oro.nifti)
 p_load(neurobase)
 p_load(feather)
 p_load(glmnet)
 p_load(fastBayesReg)
+p_load(truncnorm)
 p_load(dplyr)
-##3 Dec with white matter, stem removed and thresholded
 
+##3 Dec with white matter, stem removed and thresholded
 
 print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
-# dat_allmat<-as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/dat_rearranged.feather'))
-# 
 # part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
-# part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
+# part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
 # #These two are equal
 # part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+# # 
 part_use<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id.csv')$x
-list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use,'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz')
 
+
+img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1],'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
+
+mask.com<- oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
+list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use,'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz')
+# read multiple image files on brain mask
 dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask'))
 
-# 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
-img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1],'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
+nb <- find_brain_image_neighbors(img1, mask.com, radius=1)
+
 
 #load age
 age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
-age <- age_tab$fi
+dat.age <- age_tab$fi
 print("stage 2")
 
 #func
-get_ind <- function(num.train,num.test = 1){
-  full.ind<-1:dim(dat_allmat)[1]
-  train<-sample(x = full.ind,size = num.train,replace = FALSE)
-  test<-sample(x=setdiff(full.ind,train),size=num.test,replace=FALSE)
-  out=list()
-  out$train<-train
-  out$test<-test
-  return(out)
-}
+
 rsqcal2<-function(old,new,ind.old,ind.new){
   ridge_pred<-old
   ridge_pred_new<-new
@@ -70,50 +69,58 @@ rsqcal2<-function(old,new,ind.old,ind.new){
   out$outrmse <-round(sqrt(mean((y_new-ridge_pred_new)^2)),4)
   return(out)
 }
-
+norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
+time.train <-  Sys.time()
+poly_degree = 10
+a_concentration = 2
+b_smoothness = 40
 
-# num_part<- 2000
-# num_test<- 2000
-# set.seed(4)
-# ind.to.use <- get_ind(num_part,num_test)
+nb.centred<- apply(nb$maskcoords,2,norm.func)
+#get psi
+psi.mat.nb <- GP.eigen.funcs.fast(nb.centred, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
+#get lambda
+lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = b_smoothness, d = 3)
+#Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
+sqrt.lambda.nb <- sqrt(lambda.nb)
+bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
 
-# ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
-# ind.to.use <- list()
-# ind.to.use$test <- unlist(ind.temp[2,])
-# ind.to.use$train <- unlist(ind.temp[1,])
+print("before cbind")
+#Get design matrix
+z.nb <- cbind(1,t(bases.nb%*%t(dat_allmat)))
+print("after cbind")
+
+#subset data
 ind.to.use<- list()
-
 ind.to.use$test <-  read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
 ind.to.use$train <-  read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
+#Tested.... doing set seed(4) get_ind is the same as loading sim_wb2_index
 
-set.seed(NULL)
-print("=====")
-print("==========")
-print("fitting hs")
+train_Y <- dat.age[ind.to.use$train]
+train_Z <- z.nb[ind.to.use$train,]
+test_Y <- dat.age[ind.to.use$test]
+test_img <- dat_allmat[ind.to.use$test,]
+test_Z <- z.nb[ind.to.use$test,]
+
+#get beta(v)
 time.train <-  Sys.time()
-lassofit <- fast_horseshoe_lm(X = cbind(1,as.matrix(dat_allmat[ind.to.use$train,])) ,y = age_tab$fi[ind.to.use$train],mcmc_sample = 1000L) #Change smaples to 400
+lassofit <- fast_normal_lm(X = train_Z ,y =train_Y,mcmc_sample = 1000L) #Change smaples to 400
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
-pred_prior<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$train, ])))#$mean
-pred_prior_new<-predict_fast_lm(lassofit, cbind(1,as.matrix(dat_allmat[ind.to.use$test, ])))#$mean
+pred_prior<-predict_fast_lm(lassofit, train_Z )#$mean
+pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
-write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_coef_',JobId,'.feather'))
+write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_coef_',JobId,'.feather'))
 
-#Posterior Predictive Mean
-# pred_prior$mean
-# pred_prior_new$mean
 
-#MCMC s.d.
-# pred_prior$sd
-# pred_prior_new$sd
+
 
 #Posterior Predictive mean in-sampleMSE
 in.mse <- mean((pred_prior$mean-age_tab$fi[ind.to.use$train])^2)
@@ -165,5 +172,4 @@ print(paste0('Proprtion of true lying within subject 95% prediction interval: ',
 cover.mat <- matrix(c(sum(stat.in.ig.true.covermod)/1611,sum(stat.out.ig.true.covermod)/1642,sum(stat.in.ig.true.covermod2)/1611,sum(stat.out.ig.true.covermod2)/1642),ncol = 4)*100
 colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
 
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_hsvwb_coverage_",JobId,".csv"), row.names = FALSE)
-
+write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct27_gprnm_coverage_",JobId,".csv"), row.names = FALSE)
