@@ -1,10 +1,18 @@
 #Function for taking in multiple runs' predictions, and calculate MAE, MSE and R^2
+if (!require("pacman")) {install.packages("pacman");library(pacman)}
+p_load(PMS)
+p_load(oro.nifti)
+p_load(neurobase)
+p_load(feather)
+p_load(glmnet)
+p_load(fastBayesReg)
+p_load(dplyr)
 
 #calculating r^2
 rsqcal <- function(true,pred){
   RSS <-sum((true - pred)^2)
   TSS <- sum((true - mean(true))^2)
-  return(1 - RSS/TSS)
+  return((1 - RSS/TSS)*100)
 }
 
 meanstats.re<- function(filename, runs){
@@ -19,30 +27,35 @@ meanstats.re<- function(filename, runs){
   for(i in runs){
     #Load in-sample
     dat.in <- as.data.frame(t(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_inpred__jobid_',i,'.feather'))))
-    dat.in <- tail(dat.in,1839)
+    dat.in <- tail(dat.in,1611)
     colnames(dat.in) <- c('id','pred')
-    age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/fi.feather')
-    wb2.train.id<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/train_index.csv')$x
+    age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
+
+####MODIFYTHS####################################################################################################
+    age_tab <- age_tab[order(age_tab$id),]
+    ####################################################################################################    
+    
+    wb2.train.id<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index.csv')$x
     wb2.train.pred <- age_tab$fi[wb2.train.id]
     true.train<- data.frame(wb2.train.id,wb2.train.pred,row.names = NULL)
     colnames(true.train) <- c('id','true')
     dat.in <- merge(dat.in,true.train, by = 'id')
     ##Metrics
-    in.rmse <- sqrt(mean((dat.in$pred-dat.in$true)^2))
+    in.rmse <- (mean((dat.in$pred-dat.in$true)^2))
     in.mae <- (mean(abs(dat.in$pred-dat.in$true)))
     in.rsq <- rsqcal(dat.in$true,dat.in$pred)
     
     #Load out-of-sample
     dat.out <- as.data.frame(t(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_outpred__jobid_',i,'.feather'))))
-    dat.out <- tail(dat.out,1839)
+    dat.out <- tail(dat.out,1642)
     colnames(dat.out) <- c('id','pred')
-    wb2.test.id<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/test_index.csv')$x
+    wb2.test.id<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index.csv')$x
     wb2.test.pred <- age_tab$fi[wb2.test.id]
     true.test<- data.frame(wb2.test.id,wb2.test.pred,row.names = NULL)
     colnames(true.test) <- c('id','true')
     dat.out <- merge(dat.out,true.test, by = 'id')
     ##Metrics
-    out.rmse <- sqrt(mean((dat.out$pred-dat.out$true)^2))
+    out.rmse <- (mean((dat.out$pred-dat.out$true)^2))
     out.mae <- (mean(abs(dat.out$pred-dat.out$true)))
     out.rsq <- rsqcal(dat.out$true,dat.out$pred)
     
@@ -56,34 +69,40 @@ meanstats.re<- function(filename, runs){
     out.rsq.vec <- c(out.rsq.vec,out.rsq)
   }
   out <- matrix(,nrow=6,ncol=2)
-  out[1,] <- c(mean(in.rmse.vec),sd(in.rmse.vec))
-  out[2,] <- c(mean(in.mae.vec),sd(in.mae.vec))
-  out[3,] <- c(mean(in.rsq.vec),sd(in.rsq.vec))
-  out[4,] <- c(mean(out.rmse.vec),sd(out.rmse.vec))
-  out[5,] <- c(mean(out.mae.vec),sd(out.mae.vec))
-  out[6,] <- c(mean(out.rsq.vec),sd(out.rsq.vec))
+  # out[1,] <- c(round(mean(in.rmse.vec),2),round(sd(in.rmse.vec),3))
+  # out[3,] <- c(round(mean(in.mae.vec),2),round(sd(in.mae.vec),3))
+  # out[2,] <- c(round(mean(in.rsq.vec),2),round(sd(in.rsq.vec),3))
+  # out[4,] <- c(round(mean(out.rmse.vec),2),round(sd(out.rmse.vec),3))
+  # out[6,] <- c(round(mean(out.mae.vec),2),round(sd(out.mae.vec),3))
+  # out[5,] <- c(round(mean(out.rsq.vec),2),round(sd(out.rsq.vec),3))
+  out[1,] <- c(round(sqrt(median(in.rmse.vec)),2),round(sqrt(sd(in.rmse.vec)),3))
+  out[3,] <- c(round(median(in.mae.vec),2),round(sd(in.mae.vec),3))
+  out[2,] <- c(round(median(in.rsq.vec),2),round(sd(in.rsq.vec),3))
+  out[4,] <- c(round(sqrt(median(out.rmse.vec)),2),round(sqrt(sd(out.rmse.vec)),3))
+  out[6,] <- c(round(median(out.mae.vec),2),round(sd(out.mae.vec),3))
+  out[5,] <- c(round(median(out.rsq.vec),2),round(sd(out.rsq.vec),3))
   out <-  as.data.frame(out)
   colnames(out) <- c("mean", "sd")
-  rownames(out) <- c("inRMSE","inMAE","inR2","outRMSE","outMAE","outR2")
+  rownames(out) <- c("inRMSE","inR2","inMAE","outRMSE","outR2","outMAE")
   return(out)
 }
+date <- "nov6"
 
-stat.vanilla <- meanstats.re("oct15_gpnn_lr00005",c(22,28))
+stat.vanilla <- meanstats.re("nov2_sub_gpnn_lr00005",c(14,17,2,22,3,7,9))
 print("=========van DONE=========")
-write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_summary_gpnn_lr00005.csv"))
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/",date,"_re_median_summary_gpnn_lr00005.csv"))
 
-stat.vanilla <- meanstats.re("oct15_gpnn_lr00005_init",c(12,15,21,24,6))
+stat.vanilla <- meanstats.re("nov4_gpnnhc", c(12,14,17,2,6,9))
 print("=========van DONE=========")
-write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_summary_gpnn_lr00005_init.csv"))
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/",date,"_re_median_summary_gpnnhc.csv"))
 
-stat.vanilla <- meanstats.re("oct14_stgp_lr00005",1:10)
+stat.vanilla <- meanstats.re("nov2_sub_stgp_th25",1:30)
 print("=========van DONE=========")
-write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_summary_stgp_lr00005.csv"))
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/",date,"_re_median_summary_stgp_th25.csv"))
 
-stat.vanilla <- meanstats.re("oct14_stgp_lr00005_init",1:10)
+stat.vanilla <- meanstats.re("nov2_stgp_th100",1:30)
 print("=========van DONE=========")
-write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_summary_stgp_lr00005_init.csv"))
-
+write.csv(stat.vanilla,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/",date,"_re_median_summary_stgp_th100.csv"))
 
 
 
