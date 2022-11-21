@@ -1,4 +1,8 @@
 # R script to compute GP first layer and 2nd layer
+
+#2nd layer with 2,3,8,9 removed
+
+
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
 p_load(PMS)
@@ -17,7 +21,7 @@ a_vec  <- c(1,2,3,4,5)
 b_vec  <- c(30,40,50,60,70,80,90,100)
 param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
 
-mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(mask_subcor)),0))
 masked.reg <- mask_subcor[mask_subcor>0]
 #load preset
@@ -86,7 +90,7 @@ for(i in res3.mask.reg){
     bases.nb.to.use[m==masked.reg,] <- (t(as.matrix(bases.nb)))[m==masked.reg,]
   }
   
-  partial.gp[i,,] <- (bases.nb.to.use)
+  partial.gp[which(i==res3.mask.reg),,] <- (bases.nb.to.use)
 }
 
 
@@ -152,5 +156,5 @@ for(i in res3.mask.reg){
     bases.nb.to.use[m==masked.reg,] <- (t(as.matrix(bases.nb)))[m==masked.reg,]
   }
   
-  partial.gp[i,,] <- (bases.nb.to.use)
+  partial.gp[which(i==res3.mask.reg),,] <- (bases.nb.to.use)
 }

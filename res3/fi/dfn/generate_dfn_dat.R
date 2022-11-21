@@ -75,3 +75,15 @@ for(i in 1:length(part.full$x)){
 write_feather(fi_tab, '/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
 
 
+
+
+############################After 7 Nov,  data went missing
+# [1] "Missing total: 335"
+# [1] "Missing train: 162"
+# [1] "Missing test: 173"
+part_use<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id.csv')$x
+part.exist <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use,'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
+write.csv(part_use[part.exist],'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id2.csv', row.names = FALSE)
+write.csv(1:1449, '/well/nichols/users/qcv214/bnn2/res3/fi/dfn/train_index2.csv', row.names = FALSE)
+write.csv(1450:2918, '/well/nichols/users/qcv214/bnn2/res3/fi/dfn/test_index2.csv', row.names = FALSE)
+############################9 Nov, above was tempaorary
