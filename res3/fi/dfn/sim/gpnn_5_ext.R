@@ -19,12 +19,12 @@ set.seed(4)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "nov29_gpnn10_5"
+filename <- "nov25_gpnn10_ext"
 prior.var <- 0.05
 l.prior.var <- 5e-5
-learning_rate <- 5e-8 #for slow decay starting less than 1
+learning_rate <- 5e-10 #for slow decay starting less than 1
 prior.var.bias <- 1
-epoch <- 700
+epoch <- 100
 lr.init <- learning_rate
 
 
@@ -97,6 +97,7 @@ train.test.ind$train <-  read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/t
 n.train <- length(train.test.ind$train)
 
 
+
 source("/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_first_layer.R")
 source("/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_second_layer.R")
 
@@ -117,8 +118,9 @@ it.num <- 1
 
 #Fix prior var to be 0.1
 # prior.var <- 1.5
-y.sigma <- var(age[train.test.ind$train])
+y.sigma <- tail(as.vector(unlist(read.csv( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_nov25_gpnn10_5_sigma__jobid_1.csv'))),1)
 y.sigma.vec <- y.sigma
+
 
 print("Initialisation")
 #1 Initialisation
@@ -128,6 +130,9 @@ for(i in 1:n.mask){
   theta.matrix[i,] <- rnorm(n.expan,0,sqrt(prior.var*y.sigma))
 }
 
+theta.matrix <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_nov25_gpnn10_5_theta_',"_jobid_",1,'.feather')))
+
+
 #1.2 Multiply the partial weights to partial GP and use it as the actual weights of size (p x 1)
 #Initialising weights
 weights <- matrix(, ncol = p.dat, nrow = n.mask)
@@ -135,12 +140,13 @@ for(i in 1:n.mask){
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
 #Initialising bias (to 0)
-bias <- rnorm(n.mask)
+bias<- as.vector(unlist(read.csv( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_nov25_gpnn10_5_bias__jobid_1.csv')))
 
 #Last layer
 l.expan <- dim(partial.gp.centroid)[2]
-l.bias <- rnorm(1)
-l.theta <- rnorm(l.expan,0,sqrt(l.prior.var*y.sigma))
+l.bias <- as.vector(unlist(read.csv( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_nov25_gpnn10_5_lbias__jobid_1.csv')))
+l.theta <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_nov25_gpnn10_5_ltheta_',"_jobid_",1,'.feather')))
+colnames(l.theta) <- NULL
 l.weights <- partial.gp.centroid  %*% l.theta
 
 time.train <-  Sys.time()
@@ -181,8 +187,6 @@ for(e in 1:epoch){
     
     temp.sum.sum.sq <- apply(theta.matrix, 1, FUN = function(x) sum(x^2))
     map.train <- c(map.train,n.train/2*log(y.sigma) +1/(2*y.sigma)*n.train*mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]) +l.expan/2*log(y.sigma) + 1/(2*y.sigma*l.prior.var)*sum(c(l.theta)^2) + 1/2*l.bias^2+n.mask*n.expan/2*log(y.sigma) + 1/(2*y.sigma)*sum(1/prior.var*(temp.sum.sum.sq))  +1/2*sum(c(bias)^2) )
-    
-
     
     
     #Validation
@@ -229,7 +233,7 @@ for(e in 1:epoch){
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
     #####
-    # print(summary(c(grad.m)))
+    print(summary(c(grad.m)))
     #####
     #Update bias
     grad.b <- matrix(,nrow = minibatch.size,ncol = n.mask)
@@ -271,9 +275,9 @@ for(e in 1:epoch){
     it.num <- it.num +1
     
     # invisible(capture.output(ifelse(it.num >=2000, learning_rate <- lr.init*0.001,ifelse(it.num >=1000, learning_rate <- lr.init*0.01, learning_rate <- lr.init) )))
-    # if((it.num %% 750) ==0){
-    #   learning_rate <- learning_rate*0.1
-    # }
+    if((it.num %% 750) ==0){
+      learning_rate <- learning_rate*0.1
+    }
     # learning_rate <- learning_rate
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
@@ -304,11 +308,6 @@ write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/re
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_theta_',"_jobid_",JobId,'.feather'))
 write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(y.sigma.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_sigma_',"_jobid_",JobId,".csv"), row.names = FALSE)
-
-write.csv(l.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_lbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(l.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_lweights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(l.theta),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_ltheta_',"_jobid_",JobId,'.feather'))
-
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL

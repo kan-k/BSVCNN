@@ -18,7 +18,15 @@ p_load(dplyr)
 print("stage 1")
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 
+set.seed(JobId)
+
+# part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
+# part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
+# #These two are equal
+# part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
+# # 
 part_use<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id.csv')$x
+
 
 img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1],'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
 
@@ -27,12 +35,8 @@ list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjec
 # read multiple image files on brain mask
 dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_res3mask'))
 
-nb <- find_brain_image_neighbors(img1, mask.com, radius=1)
-
-
 #load age
-age_tab <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sim/simfi7.csv')
-colnames(age_tab) <- c('id','fi')
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/fi.feather')
 dat.age <- age_tab$fi
 print("stage 2")
 
@@ -68,19 +72,93 @@ norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
 time.train <-  Sys.time()
-poly_degree = 6
-a_concentration = 2
-b_smoothness = 40
 
-nb.centred<- apply(nb$maskcoords,2,norm.func)
-#get psi
-psi.mat.nb <- GP.eigen.funcs.fast(nb.centred, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
-#get lambda
-lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = b_smoothness, d = 3)
-#Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
-sqrt.lambda.nb <- sqrt(lambda.nb)
-bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
+##################################################################################################################################
 
+dimension = 3
+deg_vec<- c(6)
+a_vec  <- c(1,2,3,4,5)
+b_vec  <- c(30,40,50,60,70,80,90,100)
+param_grid <- as.matrix(expand.grid(deg_vec,a_vec,b_vec))
+
+mask_subcor<-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_res3mask.nii.gz')
+res3.mask.reg <- sort(setdiff(unique(c(mask_subcor)),0))
+masked.reg <- mask_subcor[mask_subcor>0]
+#load preset
+
+gs.opt <- matrix(,ncol=2,nrow = length(res3.mask.reg))
+for(i in sort(res3.mask.reg)){
+  gs.opt[which(i==(res3.mask.reg)),]<- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/dfn_gs19oct_ROI_",i,".csv")))
+}
+
+p.dat <- ncol(dat_allmat)
+n.dat <- nrow(dat_allmat)
+n.expan <- choose(deg_vec+3,3)
+
+
+# bases.nb.temp <- matrix(,ncol=1,nrow= choose(max(deg_vec)+dimension,dimension))
+partial.gp <- array(, dim = c(p.dat,n.expan))
+for(i in 12){
+  #Load region mask
+  mask.temp<-oro.nifti::readNIfTI(paste0('/well/nichols/users/qcv214/bnn2/res3/roi/dfn_mask_ROI_',i))
+  invisible(capture.output(nb <- find_brain_image_neighbors(img1, mask.temp, radius=1)))
+  #Get the centre of the region
+  nb.centre<- apply(nb$maskcoords,2,median)
+  #Load full mask
+  
+  #get coord wrt full mask
+  invisible(capture.output(nb.full <- find_brain_image_neighbors(img1, mask_subcor, radius=1)))
+  #Re-centre the coords wrt centre of ROI
+  nb.full$maskcoords[,1] <- nb.full$maskcoords[,1] - nb.centre[1]
+  nb.full$maskcoords[,2] <- nb.full$maskcoords[,2] - nb.centre[2]
+  nb.full$maskcoords[,3] <- nb.full$maskcoords[,3] - nb.centre[3]
+  #Get max and min coord
+  nb.xmax <- max(nb.full$maskcoords[,1]) ;nb.xmin <- min(nb.full$maskcoords[,1])
+  nb.ymax <- max(nb.full$maskcoords[,2]) ;nb.ymin <- min(nb.full$maskcoords[,2])
+  nb.zmax <- max(nb.full$maskcoords[,3]) ;nb.zmin <- min(nb.full$maskcoords[,3])
+  #Get re-scaler
+  x.scaler <- max(abs(nb.xmax),abs(nb.xmin))
+  y.scaler <- max(abs(nb.ymax),abs(nb.ymin))
+  z.scaler <- max(abs(nb.zmax),abs(nb.zmin))
+  #Re-scale
+  nb.full$maskcoords[,1] <- nb.full$maskcoords[,1]/x.scaler
+  nb.full$maskcoords[,2] <- nb.full$maskcoords[,2]/y.scaler
+  nb.full$maskcoords[,3] <- nb.full$maskcoords[,3]/z.scaler
+  
+  #get psi for Region 1
+  poly_degree = deg_vec
+  a_concentration = param_grid[gs.opt[which(1==(res3.mask.reg)),1],2]
+  b_smoothness = param_grid[gs.opt[which(1==(res3.mask.reg)),1],3]
+  psi.mat.nb <- GP.eigen.funcs.fast(nb.full$maskcoords, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
+  #get lambda
+  lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = b_smoothness, d = dimension)
+  #Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
+  sqrt.lambda.nb <- sqrt(lambda.nb)
+  bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
+  bases.nb.to.use <- t(as.matrix(bases.nb))
+  #Get psi for other regions  
+  for(m in setdiff(res3.mask.reg,1)){
+    poly_degree = deg_vec
+    a_concentration = param_grid[gs.opt[which(m==(res3.mask.reg)),1],2]
+    b_smoothness = param_grid[gs.opt[which(m==(res3.mask.reg)),1],3]
+    psi.mat.nb <- GP.eigen.funcs.fast(nb.full$maskcoords, poly_degree = poly_degree, a = a_concentration, b = b_smoothness)
+    #get lambda
+    lambda.nb <- GP.eigen.value(poly_degree = poly_degree, a = a_concentration, b = b_smoothness, d = dimension)
+    #Use Karhunen-Loeve expansion/Mercer's theorem to represent our GP as a combination of gaussian realisation, lambda and psi
+    sqrt.lambda.nb <- sqrt(lambda.nb)
+    bases.nb <- t(psi.mat.nb)*sqrt.lambda.nb
+    bases.nb.to.use[m==masked.reg,] <- (t(as.matrix(bases.nb)))[m==masked.reg,]
+  }
+  
+  bases.nb <- t(bases.nb.to.use)
+}
+#[1] 124261     84
+
+
+
+
+
+##################################################################################################################################
 print("before cbind")
 #Get design matrix
 z.nb <- cbind(1,t(bases.nb%*%t(dat_allmat)))
@@ -107,22 +185,20 @@ pred_prior<-predict_fast_lm(lassofit, train_Z )#$mean
 pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_dec12_gpr7_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_dec12_gpr7_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_dec12_gpr7_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec9_gpr_LDor_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec9_gpr_LDor_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec9_gpr_LDor_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
-# write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_dec12_gpr7_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_dec12_gpr7_coef_',JobId,'.feather'))
+write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec9_gpr_LDor_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec9_gpr_LDor_coef_',JobId,'.feather'))
 
 beta_fit <- data.frame(HS = crossprod(bases.nb,lassofit$post_mean$betacoef[-1]))
 gp.mask.hs <- mask.com
 gp.mask.hs[gp.mask.hs!=0] <-abs(beta_fit$HS)
-
 gp.mask.hs@datatype = 16
 gp.mask.hs@bitpix = 32
+writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/viz/dec9_gpr_LDor_',JobId))
 
-
-# writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/viz/sub_gpr_',JobId))
 
 
 #Posterior Predictive mean in-sampleMSE
@@ -175,9 +251,4 @@ print(paste0('Proprtion of true lying within subject 95% prediction interval: ',
 cover.mat <- matrix(c(sum(stat.in.ig.true.covermod)/1611,sum(stat.out.ig.true.covermod)/1642,sum(stat.in.ig.true.covermod2)/1611,sum(stat.out.ig.true.covermod2)/1642),ncol = 4)*100
 colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
 
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_dec12_gpr7_coverage_",JobId,".csv"), row.names = FALSE)
-
-
-
-#nov18 models var 5
-#nov18 models var 6
+write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec9_gpr_LDor_coverage_",JobId,".csv"), row.names = FALSE)

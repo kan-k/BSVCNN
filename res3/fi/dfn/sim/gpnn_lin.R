@@ -13,18 +13,18 @@ p_load(fastBayesReg)
 p_load(truncnorm)
 
 #############################################
-set.seed(4)
+JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
+set.seed(JobId)
 #############################################
 
-JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "nov29_gpnn10_5"
+filename <- "dec12_gpnnlin_8_v6lr11"
 prior.var <- 0.05
-l.prior.var <- 5e-5
-learning_rate <- 5e-8 #for slow decay starting less than 1
+l.prior.var <- 5e-6
+learning_rate <- 5e-11 #for slow decay starting less than 1
 prior.var.bias <- 1
-epoch <- 700
+epoch <- 1500
 lr.init <- learning_rate
 
 
@@ -82,7 +82,7 @@ list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjec
 res3.dat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_res3mask'))
 
 #Age
-age_tab <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sim/simfi5.csv')
+age_tab <- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sim/simfi8.csv')
 age <- age_tab$pred
 
 n.mask <- length(res3.mask.reg)
@@ -98,7 +98,6 @@ n.train <- length(train.test.ind$train)
 
 
 source("/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_first_layer.R")
-source("/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_second_layer.R")
 
 #Length
 
@@ -138,10 +137,8 @@ for(i in 1:n.mask){
 bias <- rnorm(n.mask)
 
 #Last layer
-l.expan <- dim(partial.gp.centroid)[2]
 l.bias <- rnorm(1)
-l.theta <- rnorm(l.expan,0,sqrt(l.prior.var*y.sigma))
-l.weights <- partial.gp.centroid  %*% l.theta
+l.weights <- rnorm(n.mask,0,sqrt(l.prior.var*y.sigma))
 
 time.train <-  Sys.time()
 
@@ -180,9 +177,9 @@ for(e in 1:epoch){
     loss.train <- c(loss.train, mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]))
     
     temp.sum.sum.sq <- apply(theta.matrix, 1, FUN = function(x) sum(x^2))
-    map.train <- c(map.train,n.train/2*log(y.sigma) +1/(2*y.sigma)*n.train*mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]) +l.expan/2*log(y.sigma) + 1/(2*y.sigma*l.prior.var)*sum(c(l.theta)^2) + 1/2*l.bias^2+n.mask*n.expan/2*log(y.sigma) + 1/(2*y.sigma)*sum(1/prior.var*(temp.sum.sum.sq))  +1/2*sum(c(bias)^2) )
+    map.train <- c(map.train,n.train/2*log(y.sigma) +1/(2*y.sigma)*n.train*mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]) +n.mask/2*log(y.sigma) + 1/(2*y.sigma*l.prior.var)*sum(c(l.weights)^2) + 1/2*l.bias^2+n.mask*n.expan/2*log(y.sigma) + 1/(2*y.sigma)*sum(1/prior.var*(temp.sum.sum.sq))  +1/2*sum(c(bias)^2) )
     
-
+    
     
     
     #Validation
@@ -215,7 +212,7 @@ for(e in 1:epoch){
     
     ##Update last layer
     ###theta gradient
-    l.grad <--1/y.sigma*c(grad.loss)*hidden.layer %*% partial.gp.centroid ## last 2 is (batch_size x n.mask) x (n.mask x l.expan) = (batch_size x l.expan)
+    l.grad <--1/y.sigma*c(grad.loss)*hidden.layer ## last is (batch_size x n.mask) 
     l.grad.m <- colMeans(l.grad)
     ###bias gradient
     l.b.grad <- -1/y.sigma*c(grad.loss)
@@ -240,7 +237,7 @@ for(e in 1:epoch){
     grad.b.m <- c(apply(grad.b, c(2), mean))
     
     # Update sigma
-    grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(theta.matrix/prior.var)^2)+1/(2*y.sigma)*n.expan*n.mask -1/(2*l.prior.var*y.sigma^2)*sum(c(l.theta)^2) + 1/(2*y.sigma)*l.expan)
+    grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(theta.matrix/prior.var)^2)+1/(2*y.sigma)*n.expan*n.mask -1/(2*l.prior.var*y.sigma^2)*sum(c(l.weights)^2) + 1/(2*y.sigma)*n.mask)
     ####Note here of the static equal prior.var
     #Update theta matrix
     theta.matrix <- theta.matrix*(1-learning_rate*1/(prior.var*y.sigma)) - learning_rate*grad.m * length(train.test.ind$train)
@@ -251,10 +248,7 @@ for(e in 1:epoch){
     
     
     ## updateLast later
-    ###Theta
-    l.theta <- l.theta*(1-learning_rate*1/(l.prior.var*y.sigma)) - learning_rate*l.grad.m* length(train.test.ind$train)
-    ###Weight
-    l.weights <- partial.gp.centroid  %*% l.theta
+    l.weights <- l.weights*(1-learning_rate*1/(l.prior.var*y.sigma)) - learning_rate*l.grad.m* length(train.test.ind$train)
     ###Bias
     l.bias <- l.bias*(1-learning_rate) - learning_rate*c(l.b.grad.m) * length(train.test.ind$train)
     
@@ -307,7 +301,6 @@ write.csv(y.sigma.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_
 
 write.csv(l.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_lbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write_feather(as.data.frame(l.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_lweights_',"_jobid_",JobId,'.feather'))
-write_feather(as.data.frame(l.theta),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_ltheta_',"_jobid_",JobId,'.feather'))
 
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))

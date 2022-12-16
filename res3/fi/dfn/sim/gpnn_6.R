@@ -15,12 +15,12 @@ p_load(truncnorm)
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "nov18_gpnn10_6"
+filename <- "nov21_gpnn10_6"
 prior.var <- 0.05
 l.prior.var <- 5e-6
 learning_rate <- 5e-10 #for slow decay starting less than 1
 prior.var.bias <- 1
-epoch <- 250
+epoch <- 500
 lr.init <- learning_rate
 
 

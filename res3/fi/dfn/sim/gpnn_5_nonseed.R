@@ -13,13 +13,13 @@ p_load(fastBayesReg)
 p_load(truncnorm)
 
 #############################################
-set.seed(4)
+# set.seed(4)
 #############################################
 
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
 print("Starting")
 
-filename <- "nov29_gpnn10_5"
+filename <- "nov29_gpnn10_nonseed"
 prior.var <- 0.05
 l.prior.var <- 5e-5
 learning_rate <- 5e-8 #for slow decay starting less than 1
@@ -182,7 +182,7 @@ for(e in 1:epoch){
     temp.sum.sum.sq <- apply(theta.matrix, 1, FUN = function(x) sum(x^2))
     map.train <- c(map.train,n.train/2*log(y.sigma) +1/(2*y.sigma)*n.train*mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]) +l.expan/2*log(y.sigma) + 1/(2*y.sigma*l.prior.var)*sum(c(l.theta)^2) + 1/2*l.bias^2+n.mask*n.expan/2*log(y.sigma) + 1/(2*y.sigma)*sum(1/prior.var*(temp.sum.sum.sq))  +1/2*sum(c(bias)^2) )
     
-
+    
     
     
     #Validation
@@ -229,7 +229,7 @@ for(e in 1:epoch){
     #Take batch average
     grad.m <- apply(grad, c(2,3), mean)
     #####
-    # print(summary(c(grad.m)))
+    print(summary(c(grad.m)))
     #####
     #Update bias
     grad.b <- matrix(,nrow = minibatch.size,ncol = n.mask)
@@ -304,7 +304,6 @@ write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/re
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_theta_',"_jobid_",JobId,'.feather'))
 write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(y.sigma.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_sigma_',"_jobid_",JobId,".csv"), row.names = FALSE)
-
 write.csv(l.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_lbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write_feather(as.data.frame(l.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_lweights_',"_jobid_",JobId,'.feather'))
 write_feather(as.data.frame(l.theta),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/sim_',filename,'_ltheta_',"_jobid_",JobId,'.feather'))

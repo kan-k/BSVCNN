@@ -2,6 +2,8 @@
 
 # 11 Nov, after 1000 steps, change learning rate to 5e-11 from 5e-10, and after 2000, to 5e-12
 
+#As of 24 Nov, parameters are in the (N)^th update, but loss and predictions are in (N-1)^th
+
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
 p_load(PMS)
@@ -21,12 +23,12 @@ print("Starting")
 
 
 
-filename <- "nov17_gpnn10_5"
+filename <- "nov25_gpnn10_5"
 prior.var <- 0.05
 l.prior.var <- 5e-5
 learning_rate <- 5e-10 #for slow decay starting less than 1
 prior.var.bias <- 1
-epoch <- 250
+epoch <- 400
 lr.init <- learning_rate
 
 
@@ -172,16 +174,12 @@ for(e in 1:epoch){
     #Hidden layer
     # z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
     # hs_fit_SOI <- fast_horseshoe_lm(age[mini.batch$train[[b]]],z.nb) #This also gives the bias term
-    
     beta_fit <- data.frame(HS = l.weights)
-    
     # beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
     #Output layer
     # hs_in.pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer %*%beta_fit$HS
     hs_in.pred_SOI <- l.bias + hidden.layer %*%beta_fit$HS
     loss.train <- c(loss.train, mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]))
-    
-    
     #Validation
     #Layers
     hidden.layer.test <- matrix(,nrow=length(train.test.ind$test),ncol = n.mask)
@@ -206,6 +204,7 @@ for(e in 1:epoch){
     
     
     #Update weight
+    if(it.num < epoch*num.batch){
     
     #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
     grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
@@ -237,7 +236,7 @@ for(e in 1:epoch){
     grad.b.m <- c(apply(grad.b, c(2), mean))
     
     # Update sigma
-    grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(theta.matrix/prior.var)^2)+1/(2*y.sigma)*n.expan*n.mask) -1/(2*l.prior.var*y.sigma^2)*sum(c(l.theta)^2) + 1/(2*y.sigma)*l.expan
+    grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(theta.matrix/prior.var)^2)+1/(2*y.sigma)*n.expan*n.mask -1/(2*l.prior.var*y.sigma^2)*sum(c(l.theta)^2) + 1/(2*y.sigma)*l.expan)
     ####Note here of the static equal prior.var
     #Update theta matrix
     theta.matrix <- theta.matrix*(1-learning_rate*1/(prior.var*y.sigma)) - learning_rate*grad.m * length(train.test.ind$train)
@@ -264,11 +263,12 @@ for(e in 1:epoch){
     for(i in 1:n.mask){
       weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
     }
+    }
     
     it.num <- it.num +1
     
     # invisible(capture.output(ifelse(it.num >=2000, learning_rate <- lr.init*0.001,ifelse(it.num >=1000, learning_rate <- lr.init*0.01, learning_rate <- lr.init) )))
-    if((it.num %% 1000) ==0){
+    if((it.num %% 750) ==0){
       learning_rate <- learning_rate*0.1
     }
     # learning_rate <- learning_rate
@@ -300,6 +300,11 @@ write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/re
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_theta_',"_jobid_",JobId,'.feather'))
 write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(y.sigma.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_sigma_',"_jobid_",JobId,".csv"), row.names = FALSE)
+
+write.csv(l.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_lbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(l.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_lweights_',"_jobid_",JobId,'.feather'))
+write_feather(as.data.frame(l.theta),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_',filename,'_ltheta_',"_jobid_",JobId,'.feather'))
+
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL
