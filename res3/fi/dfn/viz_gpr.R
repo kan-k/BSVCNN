@@ -109,15 +109,9 @@ lassofit <- fast_horseshoe_lm(X = train_Z ,y =train_Y,mcmc_sample = 1000L) #Chan
 time.taken <- Sys.time() - time.train
 
 beta_fit <- data.frame(HS = crossprod(bases.nb,lassofit$post_mean$betacoef[-1]))
-
 gp.mask.hs <- mask.com
-
-
 gp.mask.hs[gp.mask.hs!=0] <-abs(beta_fit$HS)
-
 gp.mask.hs@datatype = 16
 gp.mask.hs@bitpix = 32
-
-
 writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/viz/gpr'))
 

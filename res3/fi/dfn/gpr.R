@@ -28,10 +28,10 @@ part_use<- read.csv('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/part_id.csv')$x
 
 img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1],'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz'))
 
-mask.com<- oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask.nii.gz')
+mask.com<- oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_res3mask.nii.gz')
 list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use,'/fMRI/rfMRI_25.dr/dr_stage2.nii.gz')
 # read multiple image files on brain mask
-dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/res3mask'))
+dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/fi/dfn/sub_res3mask'))
 
 nb <- find_brain_image_neighbors(img1, mask.com, radius=1)
 
@@ -73,7 +73,7 @@ norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
 time.train <-  Sys.time()
-poly_degree = 10
+poly_degree = 6
 a_concentration = 2
 b_smoothness = 40
 
@@ -112,12 +112,12 @@ pred_prior<-predict_fast_lm(lassofit, train_Z )#$mean
 pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec12_gpr_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec12_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec12_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
-write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_coef_',JobId,'.feather'))
+write.csv(rbind(c(ind.to.use$train),c(ind.to.use$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec12_gpr_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec12_gpr_coef_',JobId,'.feather'))
 
 
 
@@ -172,4 +172,4 @@ print(paste0('Proprtion of true lying within subject 95% prediction interval: ',
 cover.mat <- matrix(c(sum(stat.in.ig.true.covermod)/1611,sum(stat.out.ig.true.covermod)/1642,sum(stat.in.ig.true.covermod2)/1611,sum(stat.out.ig.true.covermod2)/1642),ncol = 4)*100
 colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
 
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_oct26_gpr_coverage_",JobId,".csv"), row.names = FALSE)
+write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/fi/pile/re_dec12_gpr_coverage_",JobId,".csv"), row.names = FALSE)
