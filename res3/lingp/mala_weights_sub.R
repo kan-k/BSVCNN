@@ -1,0 +1,360 @@
+# R script
+
+# This is taken `mala_weights_q_fixed.R`
+#Explore lr s.t. 
+#Reduce number of samples from 2,000 to 200
+
+if (!require("pacman")) {install.packages("pacman");library(pacman)}
+p_load(BayesGPfit)
+p_load(PMS)
+p_load(oro.nifti)
+p_load(neurobase)
+p_load(feather)
+p_load(glmnet)
+p_load(fastBayesReg)
+p_load(truncnorm)
+p_load(nimble)
+p_load(extraDistr)
+JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
+set.seed(JobId)
+
+print("Starting")
+
+print('############### Test Optimised ###############')
+
+step_size <- 31e-7 ##Arbitrary
+
+filename <- "mar21_mala_weights_sub_lr31e7"
+init.num <- 2
+prior.var <- 0.05 #was 0.05
+start.b <- 1e1 #Originally 1e9
+start.a <- 1e-12
+start.gamma <- 0.55
+learning_rate <- start.a*(start.b+1)^(-start.gamma) #for slow decay starting less than 1 #
+prior.var.bias <- 1
+epoch <- 300 #was 500
+# burnin.epoch <- 100 #Epochs until SGLD kicks in
+record.epoch <- 200 #Record last 100 epochs
+# beta.bb<- 0.5
+lr.init <- learning_rate
+
+
+start.time <- Sys.time()
+#1 Split data into mini batches (train and validation)
+
+train_test_split<- function(num_datpoint, num_test,num_train){
+  full.ind<-1:num_datpoint
+  #test
+  test<-sample(x=full.ind,size=num_test,replace=FALSE)
+  #train
+  left <-sample(x=setdiff(full.ind,test),size=num_train,replace=FALSE)
+  mini_batches <- split(left,ceiling(seq_along(left)/batch_size))
+  out=list()
+  out$test<-test
+  out$train<-left
+  return(out)
+}
+
+batch_split <- function(left, batch_size){
+  left <- sample(x=left,size=length(left),replace=FALSE)
+  mini_batches <- split(left,ceiling(seq_along(left)/batch_size))
+  out=list()
+  out$train<-mini_batches
+  return(out)
+}
+rsqcal <- function(true,pred){
+  RSS <-sum((true - pred)^2)
+  TSS <- sum((true - mean(true))^2)
+  return((1 - RSS/TSS)*100)
+}
+
+#Define ReLU
+relu <- function(x) sapply(x, function(z) max(0,z))
+relu.prime <- function(x) sapply(x, function(z) 1.0*(z>0))
+
+#Define Mean Squared Error
+mse <- function(pred, true){mean((pred-true)^2)}
+phi <- function(k){(k+1)}
+
+#Losses
+loss.train <- vector(mode = "numeric")
+loss.val <- vector(mode = "numeric")
+map.train <- vector(mode = "numeric")
+#r squared
+rsq.train <- vector(mode = "numeric")
+rsq.val <- vector(mode = "numeric")
+#Predictions
+pred.train.ind <- vector(mode = "numeric")
+pred.train.val <- vector(mode = "numeric")
+pred.test.ind <- vector(mode = "numeric")
+pred.test.val <- vector(mode = "numeric")
+#Epoch learning rate
+lr.vec <- vector(mode = "numeric")
+pre.lr.vec <- vector(mode = "numeric")
+prod.lr.vec <-  vector(mode = "numeric")
+ck.old <- 1
+#Recaord noise of gradients
+#####Need to change in other cases
+grad.noise <- matrix(nrow = 12*2,ncol=epoch)
+
+print("Loading data")
+
+#Load data and mask and GP 
+#mask
+res3.mask <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
+res3.mask.reg <- sort(setdiff(unique(c(res3.mask)),0))
+#data
+res3.dat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather'))
+#Age
+age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
+age_tab <- age_tab[order(age_tab$id),]
+age <- age_tab$age
+
+n.mask <- length(res3.mask.reg)
+# n.expan <- choose(6+3,3)
+p.dat <- ncol(res3.dat)
+n.dat <- nrow(res3.dat)
+
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
+train.test.ind <- list()
+train.test.ind$test <-  unlist(ind.temp[2,])
+train.test.ind$train <-  unlist(ind.temp[1,])[1:200]
+n.train <- length(train.test.ind$train)
+
+
+#Filter only data from training:
+res3.dat.test <- res3.dat[train.test.ind$test,]
+age.test <- age[train.test.ind$test]
+
+res3.dat <- res3.dat[train.test.ind$train,]
+age <- age[train.test.ind$train]
+
+
+# source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp4.R")
+partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
+
+
+#Length
+
+
+time.taken <- Sys.time() - start.time
+cat("Loading data complete in: ", time.taken)
+
+
+print("Getting mini batch")
+#Get minibatch index 
+batch_size <- 500
+
+
+#NN parameters
+it.num <- 1
+
+#Initial parameters for inverse gamma
+alpha.init <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb27_gpnn_bb_ig_init_ext_bbs_test_alpha__jobid_",init.num,".csv")) #shape
+alpha.init <- as.numeric(c(alpha.init[,length(alpha.init)-1]))
+beta.init <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb27_gpnn_bb_ig_init_ext_bbs_test_beta__jobid_",init.num,".csv")) #scale
+beta.init <- as.numeric(c(beta.init[,length(beta.init)-1]))
+
+#Storing inv gamma
+conj.alpha <- matrix(, nrow=n.mask,ncol=epoch*4)
+conj.beta <- matrix(, nrow=n.mask,ncol=epoch*4)
+conj.invgamma <-matrix(, nrow=n.mask,ncol=epoch*4)
+# conj.cv <- matrix(, nrow=n.mask,ncol=epoch*4)
+
+#Define init var
+prior.var <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb27_gpnn_bb_ig_init_ext_bbs_test_invgam__jobid_",init.num,".csv"))#Mean of IG
+prior.var <- as.numeric(c(prior.var[,length(prior.var)-1]))
+print(prior.var)
+#Fix prior var to be 0.1
+# prior.var <- 1.5
+y.sigma <- tail(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb27_gpnn_bb_ig_init_ext_bbs_test_sigma__jobid_",init.num,".csv"))$x,1)
+y.sigma.vec <- y.sigma
+
+gaus.sd <- 0
+
+print("Initialisation")
+#1 Initialisation
+#1.1 Initialise the partial weights around normal dist as a matrix of size (nrow(bases..ie choose...) x number of neurons in 2nd layer ie#regions)
+# theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
+weights <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_feb27_gpnn_bb_ig_init_ext_bbs_test_weights__jobid_',init.num,'.feather')))
+
+#Initialising bias (to 0)
+bias <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb27_gpnn_bb_ig_init_ext_bbs_test_bias__jobid_",init.num,".csv"))$x
+time.train <-  Sys.time()
+
+print("Finished loading bias and weights")
+#######################################################################################################################################
+
+##### This is wrong, it needs to incorporate everything!!!!!
+
+
+
+# Define the log-posterior distribution
+log_posterior <- function(weights) {
+  
+  hidden.layer <- apply(t(t(res3.dat%*%t(weights)) + bias), 2, FUN = relu)
+  z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
+  hs_fit_SOI <- fast_normal_lm(age,z.nb) #This also gives the bias term
+  beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
+  l.bias <- hs_fit_SOI$post_mean$betacoef[1]
+  hs_in.pred_SOI <- l.bias + hidden.layer %*%beta_fit$HS
+  loss.train <- c(loss.train, mse(hs_in.pred_SOI,age))
+  rsq.train <- c(rsq.train, rsqcal(age,hs_in.pred_SOI))
+  temp.sum.sum.sq <- apply(weights, 1, FUN = function(x) sum(x^2))
+  grad.loss <- age - hs_in.pred_SOI
+  
+  log.likelihood <- sum(-(n.train/2*log(y.sigma) +1/(2*y.sigma)*n.train*mse(hs_in.pred_SOI,age) +n.mask/2*log(y.sigma) +n.mask*p.dat/2*log(y.sigma)))
+  log.prior <- -(n.mask*p.dat/2*log(y.sigma) + 1/(2*y.sigma)*sum(1/prior.var*(temp.sum.sum.sq)))
+  log_pos <- log.likelihood + log.prior
+  
+  return(log_pos)
+}
+
+# Define the gradient of the log-posterior distribution
+grad_log_posterior <- function(weights) {
+  
+  
+  hidden.layer <- apply(t(t(res3.dat%*%t(weights)) + bias), 2, FUN = relu)
+  z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
+  hs_fit_SOI <- fast_normal_lm(age,z.nb) #This also gives the bias term
+  beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
+  l.bias <- hs_fit_SOI$post_mean$betacoef[1]
+  hs_in.pred_SOI <- l.bias + hidden.layer %*%beta_fit$HS
+  loss.train <- c(loss.train, mse(hs_in.pred_SOI,age))
+  rsq.train <- c(rsq.train, rsqcal(age,hs_in.pred_SOI))
+  temp.sum.sum.sq <- apply(weights, 1, FUN = function(x) sum(x^2))
+  grad.loss <- age - hs_in.pred_SOI
+  
+  # Compute the gradient using automatic differentiation
+  
+  grad <- array(,dim = c(n.train,dim(weights)))
+  for(j in 1:n.mask){ #nrow of theta.matrix = n.mask
+    grad[,j,] <- 1/y.sigma*c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat   #I removed the negative sign 
+  } 
+  #Take batch average
+  grad.m <- apply(grad, c(2,3), mean)
+  gradient <- c((weights/(prior.var*y.sigma) + grad.m*n.train)) #Remove the negative signs in front of weights
+  # Return the gradient
+  return(gradient)
+}
+
+# Define the proposal distribution
+proposal <- function(weights, step_size) {
+  # Compute the mean of the proposal distribution
+  mean_proposal <- weights + step_size * grad_log_posterior(weights)
+  # Compute the covariance matrix of the proposal distribution
+  # cov_proposal <- step_size * diag(length(weights))
+  # Generate a new state from the proposal distribution
+  # new_state <- MASS::mvrnorm(1, mean = mean_proposal, Sigma = cov_proposal)
+  new_state.flatten <- c(mean_proposal) + sqrt(2*step_size)*rnorm(length(c(mean_proposal)))
+  new_state <- matrix(new_state.flatten,ncol = ncol(weights))
+  # Return the new state
+  return(new_state)
+}
+
+# Set the initial state and step size
+weights_current <- weights
+
+
+# Set the number of iterations and burn-in period
+num_iterations <- 1000
+# burn_in <- 0
+
+# Initialize the accepted parameter values
+accepted_params <- matrix(NA, nrow = num_iterations, ncol = 1000) #p.dat*n.mask)
+accepted_ratio <- vector(mode='numeric')
+
+# Initialize the acceptance counter
+accept_counter <- 0
+print("Starting iter")
+# Iterate through the algorithm
+for (i in 1:num_iterations) {
+  time.epoch <-  Sys.time()
+  # Compute the log likelihood and log prior
+  # Return the sum of the log likelihood and log prior
+  
+  #Remove
+  
+  # Generate a proposal
+  weights_proposal <- proposal(weights_current, step_size)
+  # Compute the Metropolis-Hastings acceptance ratio
+  
+  
+  
+  
+  # log_accept_ratio <- log_posterior(weights_proposal) - log_posterior(weights_current) -
+  #   0.5 * (sum((weights_proposal - weights_current) / step_size)^2 - 
+  #            sum((proposal(weights_proposal, step_size) - proposal(weights_current, step_size)) / step_size)^2)
+  
+  ########A realisation is that if the covariance is fixed then transition ratio is always 1. Perhaps uses what the wikipedia propose?
+  # log_transition_ratio <- sum(dnorm(c(weights_current), c(weights_proposal), sqrt(2*step_size), log = TRUE)) - 
+  #   sum(dnorm(c(weights_proposal), c(weights_current), sqrt(2*step_size), log = TRUE))
+  log_transition_ratio <- -1/(4*step_size)*sum((c(weights_current)-c(weights_proposal)-step_size*c(grad_log_posterior(weights_proposal)))^2) +1/(4*step_size)*sum((c(weights_proposal)-c(weights_current)-step_size*c(grad_log_posterior(weights_current)))^2)
+  
+  log.cur <- log_posterior(weights_current)
+  log.prop <-  log_posterior(weights_proposal)
+  log_posterior_ratio <- log.prop - log.cur
+  
+  # print(paste0("proportion overlap old/new: ", round(sum(c(weights_current)==c(weights_proposal))/length(c(weights_current)),4)))
+  # print(paste0("log posterior Current: ", log.cur))
+  print(paste0("log posterior Proposal: ", log.prop))
+  
+  log_accept_ratio <- log_posterior_ratio + log_transition_ratio
+  
+  # print(paste0("ratio of transition prob: ", exp(log_transition_ratio)))
+  print(paste0("ratio of posterior prob: ", exp(log_posterior_ratio)))
+  accept_ratio <- exp(log_accept_ratio)
+  accepted_ratio <- c(accepted_ratio,accept_ratio)
+  print(paste0("Accept ratio: ", accept_ratio))
+  # Generate a uniform random number
+  u <- runif(1)
+  # Accept or reject the proposal
+  if (u < accept_ratio) {
+    weights_current <- weights_proposal
+    accept_counter <- accept_counter + 1
+    print("accepted")
+  }
+  # Store the accepted parameter values
+  accepted_params[i, ] <- c(weights_current)[1:1000]
+  # if (i > burn_in) {
+  #   accepted_params[i - burn_in, ] <- c(weights_current)
+  # }
+  
+  
+  
+  
+  ###Tracking performance
+  
+  hidden.layer <- apply(t(t(res3.dat%*%t(weights_current)) + bias), 2, FUN = relu)
+  z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
+  hs_fit_SOI <- fast_normal_lm(age,z.nb) #This also gives the bias term
+  beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
+  l.bias <- hs_fit_SOI$post_mean$betacoef[1]
+  hs_in.pred_SOI <- l.bias + hidden.layer %*%beta_fit$HS
+  loss.train <- c(loss.train, mse(hs_in.pred_SOI,age))
+  rsq.train <- c(rsq.train, rsqcal(age,hs_in.pred_SOI))
+  
+  print(paste0("Iteration: ",i," out of ",num_iterations,", training loss: ",mse(hs_in.pred_SOI,age), ", iteration: ",Sys.time() -time.epoch))
+  
+  #Track held-out
+  hidden.layer.test <- apply(t(t(res3.dat.test %*% t(weights_current)) + bias), 2, FUN = relu)
+  hs_pred_SOI <- l.bias + hidden.layer.test %*%beta_fit$HS
+  loss.val <- c(loss.val, mse(hs_pred_SOI,age.test))
+  rsq.val <- c(rsq.val, rsqcal(age.test,hs_pred_SOI))
+  
+}
+
+# Print the acceptance rate
+accept_rate <- accept_counter / num_iterations
+print(paste0("Acceptance rate:", accept_rate))
+
+# Plot the histogram of the accepted parameter values
+# hist(accepted_params[, 1], breaks = 30)
+
+write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_",filename,"_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(rbind(rsq.train,rsq.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_",filename,"_rsq_","_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(accepted_ratio,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_",filename,"_acceptedratio_","_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(accepted_params),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_acceptedweights_',"_jobid_",JobId,'.feather'))
+
+
+#Need to compute effective sample size 
