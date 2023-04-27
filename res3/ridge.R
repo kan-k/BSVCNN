@@ -1,8 +1,5 @@
 # R script
 
-#25 April, removing standardisation
-
-
 #lasso 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
@@ -22,25 +19,6 @@ JobId=as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
 print(JobId)
 
 
-
-######Update 15 Nov, i think one participant from held-out dropped out, 4262 instead of 4263
-# part_list<-read.table('/well/nichols/users/qcv214/Placement_2/participant_list.txt', header = FALSE, sep = "", dec = ".") #4529 participants
-# part_list$exist_vbm <- file.exists(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_list[,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
-# #These two are equal
-# part_use<-part_list[part_list$exist_vbm==1,] #4263 participants left
-# # 
-# part_1<-oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
-# img1 <- oro.nifti::readNIfTI(paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1,1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz'))
-# 
-# mask.com<- oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
-# list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjectsAll/',part_use[1:(dim(part_use)[1]),1],'/T1/T1_vbm/T1_GM_to_template_GM_mod.nii.gz')
-# # read multiple image files on brain mask
-# dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask'))
-# #load age
-# age_tab<-read_feather('/well/nichols/users/qcv214/bnn2/res3/age.feather')
-# dat.age <-age_tab$age
-
-################################################
 mask.com <-oro.nifti::readNIfTI('/well/nichols/users/qcv214/bnn2/res3/res3mask.nii.gz')
 res3.mask.reg <- sort(setdiff(unique(c(mask.com)),0))
 #data
@@ -102,7 +80,7 @@ ind.to.use$train <- unlist(ind.temp[1,])
 time.train <-  Sys.time()
 print("fitting")
 print(dim(data.matrix(as.matrix(dat_allmat))))
-lassofit<- cv.glmnet(x = data.matrix(as.matrix(dat_allmat[ind.to.use$train, ])) ,y = dat.age[ind.to.use$train], alpha = 1, lambda = NULL,standardize = FALSE) #alpha does matter here, 0 is ridge
+lassofit<- cv.glmnet(x = data.matrix(as.matrix(dat_allmat[ind.to.use$train, ])) ,y = dat.age[ind.to.use$train], alpha = 0, lambda = NULL,standardize = FALSE) #alpha does matter here, 0 is ridge
 print("in-predicting")
 print(dim(data.matrix(as.matrix(dat_allmat[ind.to.use$train,]))))
 pred_prior<-predict(lassofit, data.matrix(as.matrix(dat_allmat[ind.to.use$train,])), s= "lambda.min")
@@ -110,18 +88,16 @@ print("out-predicting")
 print(dim(data.matrix(as.matrix(dat_allmat[ind.to.use$test,]))))
 pred_prior_new<-predict(lassofit, data.matrix(as.matrix(dat_allmat[ind.to.use$test,])), s= "lambda.min")
 
-
-
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
 write.csv( c(unlist(t(as.matrix(rsqcal2(pred_prior,pred_prior_new,ind.old = ind.to.use$train,ind.new = ind.to.use$test)))),as.numeric(sub('.*:', '', summary(coef(lassofit, s=lassofit$lambda.min)[-1,]))),sum(abs(coef(lassofit, s=lassofit$lambda.min))>1e-8)),
-           paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr25_lasso_noscale_",JobId,".csv"), row.names = FALSE)
+           paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr25_ridge_noscale_",JobId,".csv"), row.names = FALSE)
 
 print("write prediction")
 
-write.csv(c(pred_prior_new),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr25_lasso_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr25_lasso_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr25_ridge_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr25_ridge_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
 
 gp.mask.hs <- mask.com
@@ -131,4 +107,4 @@ gp.mask.hs@datatype = 16
 gp.mask.hs@bitpix = 32
 
 
-writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/apr25_lasso_',JobId))
+writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/apr_25ridge_',JobId))
