@@ -1,6 +1,8 @@
 # R script
 
-# 11 Nov, after 1000 steps, change learning rate to 5e-11 from 5e-10, and after 2000, to 5e-12
+#30 Nov, change last layer in lieu of GP to Normal dist
+#Gradient updates
+
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
@@ -12,15 +14,27 @@ p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
 
+#############################################
+# set.seed(4)
+#############################################
+
 JobId=as.numeric(Sys.getenv("SGE_TASK_ID"))
+
+print(paste0("JobID is : ",JobId))
+
+set.seed(JobId)
+
+
 print("Starting")
 
-filename <- "mar31_gpnn_4" #Latest nov15
+
+
+filename <- "jan8_gpnn_2_4_12"
 prior.var <- 0.05
 l.prior.var <- 5e-4
-learning_rate <- 5e-8 #for slow decay starting less than 1
+learning_rate <- 5e-12 #for slow decay starting less than 1
 prior.var.bias <- 1
-epoch <- 500 #was 110
+epoch <- 500
 lr.init <- learning_rate
 
 
@@ -59,6 +73,7 @@ mse <- function(pred, true){mean((pred-true)^2)}
 #Losses
 loss.train <- vector(mode = "numeric")
 loss.val <- vector(mode = "numeric")
+map.train <- vector(mode = "numeric")
 
 #Predictions
 pred.train.ind <- vector(mode = "numeric")
@@ -83,16 +98,13 @@ n.expan <- choose(6+3,3)
 p.dat <- ncol(res3.dat)
 n.dat <- nrow(res3.dat)
 
-
 ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
 train.test.ind <- list()
 train.test.ind$test <-  unlist(ind.temp[2,])
 train.test.ind$train <-  unlist(ind.temp[1,])
-
-
+n.train <- length(train.test.ind$train)
 
 source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp4.R")
-partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
 
 #Length
 
@@ -118,25 +130,19 @@ print("Initialisation")
 #1 Initialisation
 #1.1 Initialise the partial weights around normal dist as a matrix of size (nrow(bases..ie choose...) x number of neurons in 2nd layer ie#regions)
 theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
-for(i in 1:n.mask){
-  theta.matrix[i,] <- rnorm(n.expan,0,sqrt(prior.var*y.sigma))
-}
-
-#1.2 Multiply the partial weights to partial GP and use it as the actual weights of size (p x 1)
-#Initialising weights
 weights <- matrix(, ncol = p.dat, nrow = n.mask)
 for(i in 1:n.mask){
+  theta.matrix[i,] <- rnorm(n.expan,500,sqrt(prior.var*y.sigma))
   weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
 }
 #Initialising bias (to 0)
 bias <- rnorm(n.mask)
 
 #Last layer
-l.expan <- dim(partial.gp.centroid)[2]
 l.bias.init <- mean(age[train.test.ind$train])
 l.bias <- rnorm(1,l.bias.init,1)
-l.theta <- rnorm(l.expan,0,sqrt(l.prior.var*y.sigma))
-l.weights <- partial.gp.centroid  %*% l.theta
+l.weights <- rnorm(n.mask,0,sqrt(l.prior.var*y.sigma))
+
 
 time.train <-  Sys.time()
 
@@ -156,37 +162,26 @@ for(e in 1:epoch){
     print(paste0("Epoch: ",e, ", batch number: ", b))
     #3 Feed it to next layer
     
-    hidden.layer <- matrix(,nrow=minibatch.size,ncol = n.mask)
-    for(i in 1:n.mask){
-      temp.mul <- (res3.dat[mini.batch$train[[b]], ]  %*% weights[i,]) + bias[i] #Will yield a batch_size x 1 + bias of that region
-      #Activate by ReLU and save to hidden layer
-      hidden.layer[,i] <- relu(temp.mul) #will yield a vector, not matrix
-    }
+    hidden.layer <- apply(t(t(res3.dat[mini.batch$train[[b]], ]  %*% t(weights)) + bias), 2, FUN = relu)
     #Hidden layer
     # z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
     # hs_fit_SOI <- fast_horseshoe_lm(age[mini.batch$train[[b]]],z.nb) #This also gives the bias term
-    
     beta_fit <- data.frame(HS = l.weights)
-    
     # beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
     #Output layer
     # hs_in.pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer %*%beta_fit$HS
     hs_in.pred_SOI <- l.bias + hidden.layer %*%beta_fit$HS
     loss.train <- c(loss.train, mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]))
-    
-    
     #Validation
     #Layers
-    hidden.layer.test <- matrix(,nrow=length(train.test.ind$test),ncol = n.mask)
-    for(i in 1:n.mask){
-      temp.mul.test <- (res3.dat[train.test.ind$test, ]  %*% weights[i,]) + bias[i] #Will yield a batch_size x 1 + bias of that region
-      #Activate by ReLU and save to hidden layer
-      hidden.layer.test[,i] <- relu(temp.mul.test)
-    }
+    hidden.layer.test <- apply(t(t(res3.dat[train.test.ind$test, ] %*% t(weights)) + bias), 2, FUN = relu)
     #Loss calculation
     # hs_pred_SOI <- hs_fit_SOI$post_mean$betacoef[1] + hidden.layer.test %*%beta_fit$HS
     hs_pred_SOI <- l.bias + hidden.layer.test %*%beta_fit$HS
     loss.val <- c(loss.val, mse(hs_pred_SOI,age[train.test.ind$test]))
+    
+    temp.sum.sum.sq <- apply(theta.matrix, 1, FUN = function(x) sum(x^2))
+    map.train <- c(map.train,n.train/2*log(y.sigma) +1/(2*y.sigma)*n.train*mse(hs_in.pred_SOI,age[mini.batch$train[[b]]]) +n.mask/2*log(y.sigma) + 1/(2*y.sigma*l.prior.var)*sum(c(l.weights)^2) + 1/2*(l.bias-l.bias.init)^2+n.mask*n.expan/2*log(y.sigma) + 1/(2*y.sigma)*sum(1/prior.var*(temp.sum.sum.sq))  +1/2*sum(c(bias)^2) )
     
     
     ##Keeping the last 5 epochs predictions
@@ -199,100 +194,83 @@ for(e in 1:epoch){
     
     
     #Update weight
-    
-    #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
-    grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
-    
-    ##Update last layer
-    ###theta gradient
-    l.grad <--1/y.sigma*c(grad.loss)*hidden.layer %*% partial.gp.centroid ## last 2 is (batch_size x n.mask) x (n.mask x l.expan) = (batch_size x l.expan)
-    l.grad.m <- colMeans(l.grad)
-    ###bias gradient
-    l.b.grad <- -1/y.sigma*c(grad.loss)
-    l.b.grad.m <- mean(l.b.grad)
-    
-    #Update weight
-    grad <- array(,dim = c(minibatch.size,dim(theta.matrix)))
-    for(j in 1:nrow(theta.matrix)){ #nrow of theta.matrix = n.mask
-      grad[,j,] <- -1/y.sigma*c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
-    }
-    #Take batch average
-    grad.m <- apply(grad, c(2,3), mean)
-    #####
-    print(summary(c(grad.m)))
-    #####
-    #Update bias
-    grad.b <- matrix(,nrow = minibatch.size,ncol = n.mask)
-    for(j in 1:n.mask){
-      grad.b[,j] <- -1/y.sigma*c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))
-    }
-    #Take batch average
-    grad.b.m <- c(apply(grad.b, c(2), mean))
-    
-    # Update sigma
-    grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(theta.matrix/prior.var)^2)+1/(2*y.sigma)*n.expan*n.mask) -1/(2*l.prior.var*y.sigma^2)*sum(c(l.theta)^2) + 1/(2*y.sigma)*l.expan
-    ####Note here of the static equal prior.var
-    #Update theta matrix
-    theta.matrix <- theta.matrix*(1-learning_rate*1/(prior.var*y.sigma)) - learning_rate*grad.m * length(train.test.ind$train)
-    #Note that updating weights at the end will be missing the last batch of last epoch
-    
-    #Update bias
-    bias <- bias*(1-learning_rate*1/(prior.var.bias)) - learning_rate*c(grad.b.m) * length(train.test.ind$train)
-    
-    
-    ## updateLast later
-    ###Theta
-    l.theta <- l.theta*(1-learning_rate*1/(l.prior.var*y.sigma)) - learning_rate*l.grad.m* length(train.test.ind$train)
-    ###Weight
-    l.weights <- partial.gp.centroid  %*% l.theta
-    ###Bias
-    l.bias <- l.bias - learning_rate*(l.bias-l.bias.init) - learning_rate*c(l.b.grad.m) * length(train.test.ind$train)
-    
-    
-    # Update sigma
-    y.sigma <- y.sigma - learning_rate*(grad.sigma.m)
-    y.sigma.vec <- c(y.sigma.vec,y.sigma)
-    
-    #Update weight
-    for(i in 1:n.mask){
-      weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
+    if(it.num < epoch*num.batch){
+      
+      #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
+      grad.loss <- age[mini.batch$train[[b]]] - hs_in.pred_SOI
+      
+      ##############      ##############      ##############      ##############      ##############
+      ##Update last layer
+      ###theta gradient
+      l.grad <--1/y.sigma*c(grad.loss)*hidden.layer ## last is (batch_size x n.mask) 
+      l.grad.m <- colMeans(l.grad)
+      ###bias gradient
+      l.b.grad <- -1/y.sigma*c(grad.loss)
+      l.b.grad.m <- mean(l.b.grad)
+      ##############      ##############      ##############      ##############      ##############      ##############
+      #Update weight
+      grad <- array(,dim = c(minibatch.size,dim(theta.matrix)))
+      for(j in 1:nrow(theta.matrix)){ #nrow of theta.matrix = n.mask
+        grad[,j,] <- -1/y.sigma*c(grad.loss)*beta_fit$HS[j]*c(relu.prime(hidden.layer[,j]))*res3.dat[mini.batch$train[[b]], ] %*% partial.gp[j,,] 
+      }
+      #Take batch average
+      grad.m <- apply(grad, c(2,3), mean)
+      #####
+      print(summary(c(grad.m)))
+      #####
+      #Update bias
+      grad.b <- 1/y.sigma* c(grad.loss)*t(beta_fit$HS * t(apply(hidden.layer, 2, FUN = relu.prime)))
+      #Take batch average
+      grad.b.m <- c(apply(grad.b, c(2), mean))
+      
+      # Update sigma
+      grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(theta.matrix/prior.var)^2)+1/(2*y.sigma)*n.expan*n.mask -1/(2*l.prior.var*y.sigma^2)*sum(c(l.weights)^2) + 1/(2*y.sigma)*n.mask)
+      ####Note here of the static equal prior.var
+      #Update theta matrix
+      theta.matrix <- theta.matrix*(1-learning_rate*1/(prior.var*y.sigma)) - learning_rate*grad.m * length(train.test.ind$train)
+      #Note that updating weights at the end will be missing the last batch of last epoch
+      
+      #Update bias
+      bias <- bias*(1-learning_rate*1/(prior.var.bias))-learning_rate*c(grad.b.m)*length(train.test.ind$train)
+      
+      ## update Last layer
+      l.weights <- l.weights*(1-learning_rate*1/(l.prior.var*y.sigma)) - learning_rate*l.grad.m* length(train.test.ind$train)
+      ###Bias
+      l.bias <- l.bias - learning_rate*(l.bias-l.bias.init) - learning_rate*c(l.b.grad.m) * length(train.test.ind$train)
+      
+      # Update sigma
+      y.sigma <- y.sigma - learning_rate*(grad.sigma.m)
+      y.sigma.vec <- c(y.sigma.vec,y.sigma)
+      
+      #Update weight
+      for(i in 1:n.mask){
+        weights[i,] <- partial.gp[i,,] %*% theta.matrix[i,]
+      }
     }
     
     it.num <- it.num +1
     
-    # invisible(capture.output(ifelse(it.num >=2000, learning_rate <- lr.init*0.001,ifelse(it.num >=1000, learning_rate <- lr.init*0.01, learning_rate <- lr.init) )))
-    if((it.num %% 500) ==0){
-      learning_rate <- learning_rate*0.1
-    }
-    # learning_rate <- learning_rate
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
   
   print(paste0("epoch: ",e," out of ",epoch, ", time taken for this epoch: ",Sys.time() -time.epoch))
   print(paste0("sigma^2: ",y.sigma))
-  
-  if(e %in% c(epoch/2,epoch)){
-    salient.mat <- matrix(,nrow=length(train.test.ind$train), ncol = p.dat)
-    for(o in train.test.ind$train){
-      salient.mat[which(o==train.test.ind$train),]<- c(beta_fit$HS %*% (relu.prime(bias+weights%*%res3.dat[o,])*weights))
-    }
-    gp.mask.hs <- res3.mask
-    gp.mask.hs[gp.mask.hs!=0] <- abs(colMeans(salient.mat))
-    gp.mask.hs@datatype = 16
-    gp.mask.hs@bitpix = 32
-    writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/',filename,'_sal_',JobId,"_epoch_",e))
-  }
+
 }
 
 time.taken <- Sys.time() - time.train
 cat("Training complete in: ", time.taken)
 
 write.csv(rbind(loss.train,loss.val),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_",filename,"_loss_","_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(map.train,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_",filename,"_map_","_jobid_",JobId,".csv"), row.names = FALSE)
 write_feather(as.data.frame(weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_weights_',"_jobid_",JobId,'.feather'))
 write_feather(as.data.frame(theta.matrix),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_theta_',"_jobid_",JobId,'.feather'))
 write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_bias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(y.sigma.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_sigma_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(l.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_lbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(l.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_lweights_',"_jobid_",JobId,'.feather'))
+
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL
