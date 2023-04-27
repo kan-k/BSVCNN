@@ -320,6 +320,7 @@ for(e in 1:epoch){
     gaus.sd <- sqrt(2*learning_rate)
     
     #Record grad.select
+    #16 Mar, should grad.m be positive or negative?
     grad.select[,b] <- c(c((weights/(prior.var*y.sigma) - grad.m * length(train.test.ind$train))[,1]),c(bias/(prior.var.bias) - c(grad.b.m) * length(train.test.ind$train)))
     
     
