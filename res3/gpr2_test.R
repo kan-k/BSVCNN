@@ -89,8 +89,8 @@ norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
 time.train <-  Sys.time()
-poly_degree = 40 #Was 20
-a_concentration = 0.5
+poly_degree = 10 #Was 10
+a_concentration = 2 #was 0.5
 b_smoothness = 40
 
 nb.centred<- apply(nb$maskcoords,2,norm.func)
@@ -135,13 +135,14 @@ pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 print(adsfasjdfoasgasjpog) #Just want to check time
 ##########################################################################################################################################################
 
+
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = train.test.ind$train,ind.new = train.test.ind$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_test2_may7_gpr_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_test2_may7_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_test2_may7_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
-write.csv(rbind(c(train.test.ind$train),c(train.test.ind$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_coef_',JobId,'.feather'))
+write.csv(rbind(c(train.test.ind$train),c(train.test.ind$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_test2_may7_gpr_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_test2_may7_gpr_coef_',JobId,'.feather'))
 
 ##Plotting 
 beta_fit <- data.frame(NM = crossprod(bases.nb,lassofit$post_mean$betacoef[-1]))
@@ -150,7 +151,7 @@ gp.mask.nm <- mask.com
 gp.mask.nm[gp.mask.nm!=0] <-beta_fit$NM
 gp.mask.nm@datatype = 16
 gp.mask.nm@bitpix = 32
-writeNIfTI(gp.mask.nm,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/apr13_wb_gp_nm_',poly_degree,a_concentration,b_smoothness,JobId))
+writeNIfTI(gp.mask.nm,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/test2_may7_wb_gp_nm_',poly_degree,a_concentration,b_smoothness,JobId))
 
 
 
@@ -206,4 +207,4 @@ print(paste0('Proprtion of true lying within subject 95% prediction interval: ',
 cover.mat <- matrix(c(sum(stat.in.ig.true.covermod),sum(stat.out.ig.true.covermod),sum(stat.in.ig.true.covermod2),sum(stat.out.ig.true.covermod2)),ncol = 4)/2000*100
 colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
 
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_coverage_",JobId,".csv"), row.names = FALSE)
+write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_test2_may7_gpr_coverage_",JobId,".csv"), row.names = FALSE)

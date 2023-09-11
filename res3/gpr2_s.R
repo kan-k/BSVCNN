@@ -12,6 +12,7 @@ p_load(glmnet)
 p_load(fastBayesReg)
 p_load(truncnorm)
 p_load(dplyr)
+p_load(caret)
 
 ##3 Dec with white matter, stem removed and thresholded
 
@@ -35,6 +36,15 @@ list_of_all_images<-paste0('/well/win-biobank/projects/imaging/data/data3/subjec
 # dat_allmat <- as.matrix(fast_read_imgs_mask(list_of_all_images,'/well/nichols/users/qcv214/bnn2/res3/res3mask')) #The number doesn't matc. I think 1 of the participants got deleted., so use saved ones.
 dat_allmat <- as.matrix(read_feather('/well/nichols/users/qcv214/bnn2/res3/res3_dat.feather'))
 
+ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
+train.test.ind <- list()
+train.test.ind$test <-  unlist(ind.temp[2,])
+train.test.ind$train <-  unlist(ind.temp[1,])
+
+############Standardising data
+std.mod <- preProcess(dat_allmat[train.test.ind$train,], method=c("center", "scale"))
+dat_allmat[train.test.ind$train,] <- predict(std.mod, dat_allmat[train.test.ind$train,])
+dat_allmat[train.test.ind$test,] <- predict(std.mod, dat_allmat[train.test.ind$test,])
 
 
 # print(dim(dat_allmat))
@@ -89,7 +99,7 @@ norm.func <- function(x){ 2*(x - min(x))/(max(x)-min(x)) -1 }
 
 print("stage 3")
 time.train <-  Sys.time()
-poly_degree = 40 #Was 20
+poly_degree = 40 #Was 10
 a_concentration = 0.5
 b_smoothness = 40
 
@@ -111,10 +121,7 @@ print("after cbind")
 num_part<- 2000
 num_test<- 2000
 
-ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
-train.test.ind <- list()
-train.test.ind$test <-  unlist(ind.temp[2,])
-train.test.ind$train <-  unlist(ind.temp[1,])
+
 
 train_Y <- dat.age[train.test.ind$train]
 train_Z <- z.nb[train.test.ind$train,]
@@ -130,18 +137,13 @@ cat("Training complete in: ", time.taken)
 pred_prior<-predict_fast_lm(lassofit, train_Z )#$mean
 pred_prior_new<-predict_fast_lm(lassofit, test_Z)#$mean
 
-
-##########################################################################################################################################################
-print(adsfasjdfoasgasjpog) #Just want to check time
-##########################################################################################################################################################
-
 write.csv(c(unlist(t(as.matrix(rsqcal2(pred_prior$mean,pred_prior_new$mean,ind.old = train.test.ind$train,ind.new = train.test.ind$test)))),as.numeric(sub('.*:', '', summary(lassofit$post_mean$betacoef[-1,]))),sum(abs(lassofit$post_mean$betacoef[-1,])>1e-5)),
-          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_outpred_noscale_",JobId,".csv"), row.names = FALSE)
-write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_inpred_noscale_",JobId,".csv"), row.names = FALSE)
+          paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_may8_gpr40_s_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior_new$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_may8_gpr40_s_outpred_noscale_",JobId,".csv"), row.names = FALSE)
+write.csv(c(pred_prior$mean),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_may8_gpr40_s_inpred_noscale_",JobId,".csv"), row.names = FALSE)
 ####Result to use
-write.csv(rbind(c(train.test.ind$train),c(train.test.ind$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_index_",JobId,".csv"), row.names = FALSE)
-write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_coef_',JobId,'.feather'))
+write.csv(rbind(c(train.test.ind$train),c(train.test.ind$test)),paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_may8_gpr40_s_index_",JobId,".csv"), row.names = FALSE)
+write_feather(as.data.frame(lassofit$post_mean$betacoef),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_may8_gpr40_s_coef_',JobId,'.feather'))
 
 ##Plotting 
 beta_fit <- data.frame(NM = crossprod(bases.nb,lassofit$post_mean$betacoef[-1]))
@@ -150,7 +152,7 @@ gp.mask.nm <- mask.com
 gp.mask.nm[gp.mask.nm!=0] <-beta_fit$NM
 gp.mask.nm@datatype = 16
 gp.mask.nm@bitpix = 32
-writeNIfTI(gp.mask.nm,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/apr13_wb_gp_nm_',poly_degree,a_concentration,b_smoothness,JobId))
+writeNIfTI(gp.mask.nm,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/may8_gpr40_s_',poly_degree,a_concentration,b_smoothness,JobId))
 
 
 
@@ -206,4 +208,4 @@ print(paste0('Proprtion of true lying within subject 95% prediction interval: ',
 cover.mat <- matrix(c(sum(stat.in.ig.true.covermod),sum(stat.out.ig.true.covermod),sum(stat.in.ig.true.covermod2),sum(stat.out.ig.true.covermod2)),ncol = 4)/2000*100
 colnames(cover.mat) <- c("train","test","npvtrain","npvtest")
 
-write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr13_gpr_coverage_",JobId,".csv"), row.names = FALSE)
+write.csv(cover.mat,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_may8_gpr40_s_coverage_",JobId,".csv"), row.names = FALSE)
