@@ -27,11 +27,11 @@ print("Starting")
 print('############### Test Optimised ###############')
 
 
-filename <- "apr27_sgld_bb_ig_a4_b0_V_200"
+filename <- "jun6_sgld_bb_ig_a3_b0_V"
 init.num <- JobId #WAS 2 [12/4/23]
 prior.var <- 0.05 #was 0.05
 start.b <- 1 #Originally 1e9
-start.a <- 1e-4
+start.a <- 1e-3
 start.gamma <- 1
 learning_rate <- start.a*(start.b+1)^(-start.gamma) #for slow decay starting less than 1 #
 prior.var.bias <- 1
@@ -121,7 +121,7 @@ n.dat <- nrow(res3.dat)
 ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
 train.test.ind <- list()
 train.test.ind$test <-  unlist(ind.temp[2,])
-train.test.ind$train <-  unlist(ind.temp[1,])[1:200]
+train.test.ind$train <-  unlist(ind.temp[1,])
 n.train <- length(train.test.ind$train)
 
 # source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp4.R")
@@ -137,7 +137,7 @@ cat("Loading data complete in: ", time.taken)
 
 print("Getting mini batch")
 #Get minibatch index 
-batch_size <- 50
+batch_size <- 500
 
 
 #NN parameters

@@ -2,10 +2,8 @@
 
 # 11 Nov, after 1000 steps, change learning rate to 5e-11 from 5e-10, and after 2000, to 5e-12
 #differ from gpnn_gp from the init variance of theta
-# Adding gradient noise
-#from BBS
-#30 Mar add recording of out of sample predictions to 1000
 
+#Now saving the IG params
 
 if (!require("pacman")) {install.packages("pacman");library(pacman)}
 p_load(BayesGPfit)
@@ -18,6 +16,8 @@ p_load(fastBayesReg)
 p_load(truncnorm)
 p_load(nimble)
 p_load(extraDistr)
+p_load(caret)
+
 JobId=as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
 print(JobId)
 set.seed(JobId)
@@ -26,19 +26,13 @@ print("Starting")
 
 print('############### Test Optimised ###############')
 
-
-filename <- "apr27_sgld_bb_ig_a4_b0_V_200"
-init.num <- JobId #WAS 2 [12/4/23]
+filename <- "apr27_gpnn_init_ext_bbs_s"
+init.num <- 3
 prior.var <- 0.05 #was 0.05
-start.b <- 1 #Originally 1e9
-start.a <- 1e-4
-start.gamma <- 1
-learning_rate <- start.a*(start.b+1)^(-start.gamma) #for slow decay starting less than 1 #
+learning_rate <- 0.99 #for slow decay starting less than 1
 prior.var.bias <- 1
-epoch <- 500 
-# burnin.epoch <- 100 #Epochs until SGLD kicks in
-record.epoch <- 500 #Record last 100 epochs
-# beta.bb<- 0.5
+epoch <- 500 #was 500
+beta.bb<- 0.5
 lr.init <- learning_rate
 
 
@@ -96,9 +90,6 @@ lr.vec <- vector(mode = "numeric")
 pre.lr.vec <- vector(mode = "numeric")
 prod.lr.vec <-  vector(mode = "numeric")
 ck.old <- 1
-#Recaord noise of gradients
-#####Need to change in other cases
-grad.noise <- matrix(nrow = 12*2,ncol=epoch)
 
 print("Loading data")
 
@@ -121,8 +112,13 @@ n.dat <- nrow(res3.dat)
 ind.temp <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_wb2_index_",4,".csv"))
 train.test.ind <- list()
 train.test.ind$test <-  unlist(ind.temp[2,])
-train.test.ind$train <-  unlist(ind.temp[1,])[1:200]
+train.test.ind$train <-  unlist(ind.temp[1,])
 n.train <- length(train.test.ind$train)
+
+############Standardising data
+std.mod <- preProcess(res3.dat[train.test.ind$train,], method=c("center", "scale"))
+res3.dat[train.test.ind$train,] <- predict(std.mod, res3.dat[train.test.ind$train,])
+res3.dat[train.test.ind$test,] <- predict(std.mod, res3.dat[train.test.ind$test,])
 
 # source("/well/nichols/users/qcv214/bnn2/res3/first_layer_gp4.R")
 partial.gp.centroid<-t(as.matrix(read_feather(paste0("/well/nichols/users/qcv214/bnn2/res3/roi/partial_gp_centroids_fixed_100.540.feather"))))
@@ -137,15 +133,16 @@ cat("Loading data complete in: ", time.taken)
 
 print("Getting mini batch")
 #Get minibatch index 
-batch_size <- 50
+batch_size <- 500
 
 
 #NN parameters
 it.num <- 1
 
 #Initial parameters for inverse gamma
-alpha.init <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb9_gpnn_bb_ig_beta5_init_minalpha__jobid_",init.num,".csv"))$x #shape
-beta.init <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb9_gpnn_bb_ig_beta5_init_minbeta__jobid_",init.num,".csv"))$x #scale
+alpha.init <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr26_gpnn_beta5_init_s_minalpha__jobid_",init.num,".csv"))$x #shape
+beta.init <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr26_gpnn_beta5_init_s_minbeta__jobid_",init.num,".csv"))$x #scale
+
 
 #Storing inv gamma
 conj.alpha <- matrix(, nrow=n.mask,ncol=epoch*4)
@@ -153,25 +150,22 @@ conj.beta <- matrix(, nrow=n.mask,ncol=epoch*4)
 conj.invgamma <-matrix(, nrow=n.mask,ncol=epoch*4)
 # conj.cv <- matrix(, nrow=n.mask,ncol=epoch*4)
 
-####
 #Define init var
-prior.var <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb9_gpnn_bb_ig_beta5_init_minpriorvar__jobid_",init.num,".csv"))$x#Mean of IG
+prior.var <-  read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr26_gpnn_beta5_init_s_minpriorvar__jobid_",init.num,".csv"))$x#Mean of IG
+
 #Fix prior var to be 0.1
 # prior.var <- 1.5
-y.sigma <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb9_gpnn_bb_ig_beta5_init_minsigma__jobid_",init.num,".csv"))$x
+y.sigma <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr26_gpnn_beta5_init_s_minsigma__jobid_",init.num,".csv"))$x
 y.sigma.vec <- y.sigma
-####
-
-gaus.sd <- 0
 
 print("Initialisation")
 #1 Initialisation
 #1.1 Initialise the partial weights around normal dist as a matrix of size (nrow(bases..ie choose...) x number of neurons in 2nd layer ie#regions)
 # theta.matrix <- matrix(,nrow=n.mask, ncol= n.expan)
-weights <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_feb9_gpnn_bb_ig_beta5_init_minweights__jobid_',init.num,'.feather')))
+weights <- as.matrix(read_feather(paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_apr26_gpnn_beta5_init_s_minweights__jobid_',init.num,'.feather')))
 
 #Initialising bias (to 0)
-bias <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_feb9_gpnn_bb_ig_beta5_init_minbias__jobid_",init.num,".csv"))$x
+bias <- read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_apr26_gpnn_beta5_init_s_minbias__jobid_",init.num,".csv"))$x
 time.train <-  Sys.time()
 
 #Start epoch
@@ -181,16 +175,11 @@ for(e in 1:epoch){
   mini.batch <- batch_split(left = train.test.ind$train, batch_size = batch_size)
   num.batch <- length(mini.batch$train)
   
-  # grad_x <- 0 #For BB
-  
-  #Storing epoch gradients of the first element of each region
-  grad.select <- matrix(, nrow=n.mask*2,ncol=num.batch)
-  
+  grad_x <- 0 #For BB
   
   time.epoch <-  Sys.time()
   #Start batch
   for(b in 1:num.batch){
-    
     
     minibatch.size <- length(mini.batch$train[[b]])
     
@@ -205,7 +194,7 @@ for(e in 1:epoch){
     # fit.lm <- lm(age[mini.batch$train[[b]]] ~ hidden.layer) #OLS Regress on the minibatch
     
     z.nb <- cbind(1, hidden.layer %*% partial.gp.centroid)
-    hs_fit_SOI <- fast_normal_lm(age[mini.batch$train[[b]]],z.nb,mcmc_sample =1) #This also gives the bias term
+    hs_fit_SOI <- fast_normal_lm(age[mini.batch$train[[b]]],z.nb) #This also gives the bias term
     beta_fit <- data.frame(HS = partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]) #This is the weights of hidden layers with
     l.bias <- hs_fit_SOI$post_mean$betacoef[1]
     
@@ -232,34 +221,14 @@ for(e in 1:epoch){
     
     
     ##Keeping the last 5 epochs predictions
-    if(e >= (epoch-record.epoch)){
+    if(e >= (epoch-5)){
       pred.train.ind <- c(pred.train.ind,mini.batch$train[[b]]) 
       pred.train.val <- c(pred.train.val,hs_in.pred_SOI)
       pred.test.ind <- c(pred.test.ind,train.test.ind$test) 
       pred.test.val <- c(pred.test.val,hs_pred_SOI) 
-      
-      if(e==(epoch-record.epoch+1)){ #Added +1 here
-        mean.num <- 1
-        mean.weights <- weights
-        mean.bias <- bias
-        
-        mean.abs.weights <- abs(weights)
-        mean.abs.bias <- abs(bias)
-        
-      }else{
-        mean.weights <- (mean.abs.weights*mean.num + weights)/(mean.num+1)
-        mean.bias <- (mean.abs.bias*mean.num + bias)/(mean.num+1)
-        #Mean Magnitude
-        mean.abs.weights <- (mean.abs.weights*mean.num + abs(weights))/(mean.num+1)
-        mean.abs.bias <- (mean.abs.bias*mean.num + abs(bias))/(mean.num+1)
-        
-        mean.num <- mean.num + 1
-      }
-      
     }
     
     if(it.num < epoch*num.batch){
-      
       #Update weight
       
       #4Update the full weights, fit GP against the full weights using HS-prior model to get normally dist thetas
@@ -286,29 +255,25 @@ for(e in 1:epoch){
       grad.sigma.m <- mean(length(train.test.ind$train)/(2*y.sigma) - length(train.test.ind$train)/(2*y.sigma^2)*c(grad.loss)^2-1/(2*y.sigma^2)*sum(c(weights/prior.var)^2)+1/(2*y.sigma)*p.dat*n.mask)
       ####Note here of the static equal prior.var
       #Update theta matrix
-      weights <- weights*(1-learning_rate*1/(prior.var*y.sigma)) - learning_rate*grad.m * length(train.test.ind$train) - matrix(rnorm(p.dat*n.mask,0,gaus.sd), ncol = p.dat, nrow = n.mask)
+      weights <- weights*(1-learning_rate*1/(prior.var*y.sigma)) - learning_rate*grad.m * length(train.test.ind$train)
       #Note that updating weights at the end will be missing the last batch of last epoch
       
       #Update bias
-      bias <- bias*(1-learning_rate*1/(prior.var.bias)) - learning_rate*c(grad.b.m) * length(train.test.ind$train) - rnorm(n.mask,0,gaus.sd)
+      bias <- bias*(1-learning_rate*1/(prior.var.bias)) - learning_rate*c(grad.b.m) * length(train.test.ind$train)
       
       # Update sigma
-      y.sigma <- y.sigma - learning_rate*(grad.sigma.m) - rnorm(1,0,gaus.sd)
+      y.sigma <- y.sigma - learning_rate*(grad.sigma.m)
       y.sigma.vec <- c(y.sigma.vec,y.sigma)
       
+      delta_f <- c(c(weights/(prior.var*y.sigma) + grad.m*n.train),c(bias/prior.var.bias + grad.b.m*(n.train)))
+      grad_x <- beta.bb*delta_f + (1-beta.bb)*grad_x
+      x.param <- c(c(weights),c(bias))
       #Update Cv
       for(i in 1:n.mask){
         alpha.shape <- alpha.init[i] + length(weights[i,])/2
-        # print(paste0("i =",i,', alpha = ',alpha.shape))
         # alpha.shape <- alpha.init[i] # Keep alpha the same
         beta.scale <- beta.init[i] + sum(weights[i,]^2)/(2*y.sigma)
-        # print(length(beta.init[i]))
-        #       print(length(beta.scale))
-        #       print(length(y.sigma))
-        #       print(length( sum(weights[i,]^2)))
-        # print(paste0("i =",i,', beta = ',beta.scale))
         prior.var[i] <- rinvgamma(n = 1, alpha.shape, beta.scale)
-        # print(paste0("i =",i,', prior.var[i] = ',prior.var[i]))
         
         conj.alpha[i,it.num] <- alpha.shape
         conj.beta[i,it.num] <- beta.scale
@@ -317,23 +282,54 @@ for(e in 1:epoch){
     }
     
     it.num <- it.num +1
-    learning_rate <- start.a*(start.b+it.num)^(-start.gamma)
-    gaus.sd <- sqrt(2*learning_rate)
     
-    #Record grad.select
-    #16 Mar, should grad.m be positive or negative?
-    grad.select[,b] <- c(c((weights/(prior.var*y.sigma) - grad.m * length(train.test.ind$train))[,1]),c(bias/(prior.var.bias) - c(grad.b.m) * length(train.test.ind$train)))
-    
-    
+    # invisible(capture.output(ifelse(it.num >=2000, learning_rate <- lr.init*0.001,ifelse(it.num >=1000, learning_rate <- lr.init*0.01, learning_rate <- lr.init) )))
+    # if((it.num %% 200) ==0){
+    #   learning_rate <- learning_rate*0.1
+    # }
+    # learning_rate <- learning_rate
     print(paste0("training loss: ",mse(hs_in.pred_SOI,age[mini.batch$train[[b]]])))
     print(paste0("validation loss: ",mse(hs_pred_SOI,age[train.test.ind$test])))
   }
   
-  #Record variance of grad.select
-  grad.noise[,e] <- apply(grad.select, 1, var)
-  
   print(paste0("epoch: ",e," out of ",epoch, ", time taken for this epoch: ",Sys.time() -time.epoch))
   print(paste0("sigma^2: ",y.sigma))
+  if(e %in% c(300,500)){ #300 and 500
+    
+    # salient.mat <- apply(t(t(res3.dat[train.test.ind$train, ]  %*% t(weights)) + bias), 2, FUN = relu.prime) %*%beta_fit$HS
+    salient.mat <- t(t(beta_fit$HS*weights) %*% t(apply(t(t(res3.dat[train.test.ind$train, ]  %*% t(weights)) + bias), 2, FUN = relu.prime)))
+    
+    gp.mask.hs <- res3.mask
+    gp.mask.hs[gp.mask.hs!=0] <- abs(colMeans(salient.mat))
+    gp.mask.hs@datatype = 16
+    gp.mask.hs@bitpix = 32
+    writeNIfTI(gp.mask.hs,paste0('/well/nichols/users/qcv214/bnn2/res3/viz/',filename,"_epoch_",e,'_sal_',JobId))
+  }
+  
+  #BB
+  #1 Feb, change indexing (3,2) to 2,1)... it's actually wrong. I am not saving the 1st lr, so 1st-3rd lr are literally the same.
+  if(e >=2){
+    diff_x = x.param - prev_x
+    diff_grad_x = grad_x - prev_grad_x
+    pre.learning_rate <- 1/num.batch*sum(diff_x*diff_x)/abs(sum(diff_x*diff_grad_x)) 
+    pre.lr.vec <- c(pre.lr.vec, pre.learning_rate)
+    
+    ck.new <- ck.old^(1/(e-1))^(e-2)*(pre.learning_rate*phi(e))^(1/(e-1))
+    
+    # prod.lr.vec<- c(prod.lr.vec,prod(pre.lr.vec*phi(2:e))^(1/(e-1)))
+    
+    # learning_rate <- prod(pre.lr.vec*phi(2:e))^(1/(e-1))/phi(e)
+    learning_rate <- ck.new/phi(e)
+    lr.vec <- c(lr.vec, learning_rate)
+    print(paste0("at epoch ",e," learning rate is ",learning_rate, ' (pre) ', pre.learning_rate))
+    print(paste0("at epoch ",e,"product of pre.lr.vec is ", prod(pre.lr.vec),", product of phi is ",prod(phi(2:e)), " phi e is ", phi(e)))
+    print(paste0("at epoch ",e,", ck.new is ", ck.new))
+    
+    ck.old <- ck.new
+  }
+  prev_x <- x.param
+  prev_grad_x <- grad_x
+  
 }
 
 pre.lr.vec <- c(lr.init,lr.init,pre.lr.vec[-length(pre.lr.vec)]) #Add first two learning rates
@@ -350,20 +346,8 @@ write.csv(bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,
 write.csv(y.sigma.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_sigma_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(l.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_lbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(lr.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_lr_',"_jobid_",JobId,".csv"), row.names = FALSE)
-# write.csv(pre.lr.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_prelr_',"_jobid_",JobId,".csv"), row.names = FALSE)
+write.csv(pre.lr.vec,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_prelr_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write_feather(as.data.frame(partial.gp.centroid %*% hs_fit_SOI$post_mean$betacoef[-1]),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_lweights_',"_jobid_",JobId,'.feather'))
-
-#gradient Noise
-write.csv(grad.noise,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_",filename,"_gradnoise_","_jobid_",JobId,".csv"), row.names = FALSE)
-
-#Mean parameters
-write_feather(as.data.frame(mean.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_meanweights_',"_jobid_",JobId,'.feather'))
-write.csv(mean.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_meanbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
-
-#Mean absparameters
-write_feather(as.data.frame(mean.abs.weights),paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_meanabsweights_',"_jobid_",JobId,'.feather'))
-write.csv(mean.abs.bias,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_meanabsbias_',"_jobid_",JobId,".csv"), row.names = FALSE)
-
 
 temp.frame <- as.data.frame(rbind(pred.train.ind,pred.train.val))
 colnames(temp.frame) <- NULL
@@ -376,7 +360,7 @@ colnames(temp.frame) <- 1:ncol(temp.frame)
 # temp.frame<- t(tail(t(temp.frame),length(train.test.ind$test)*5))
 write_feather(temp.frame,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_outpred_',"_jobid_",JobId,'.feather'))
 
-#Inverse gamma param
+#inv gamme param
 write.csv(conj.alpha,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_alpha_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(conj.beta,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_beta_',"_jobid_",JobId,".csv"), row.names = FALSE)
 write.csv(conj.invgamma,paste0( '/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_invgam_',"_jobid_",JobId,".csv"), row.names = FALSE)
