@@ -80,6 +80,11 @@ for(i in runs){
   colnames(joined_data.train) <- c("subject_id", "truth","mean_pred", "lwr_ppi", "upr_ppi", "within_interval")
   
   
+  ####Added 18 Aug
+  ############For MALA, 200 training
+  joined_data.train <- joined_data.train[1:200,]
+  
+  
   #Test
   dat.test <- as.data.frame(t(read_feather(paste0('/well/nichols/users/qcv214/bnn2/res3/pile/re_',filename,'_outpred__jobid_',i,'.feather'))))
   dat.test <- tail(dat.test,2000*1000)
@@ -142,8 +147,8 @@ for(i in runs){
 # print("start=========")
 # stat.ig <- meanstats.re("apr5_mala_weights_sub_adapt1_opt_V",c(1:10), mala_if=TRUE)
 # write.csv(stat.ig,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_summary_may10_mala_mode.csv"))
-print("=========IG DONE=========")
-stat.eb <-meanstats.re("may7_mala_weights_sub_adapt1_diffinit", c(2:4,7:10), mala_if=FALSE)
+#print("=========IG DONE=========")
+#stat.eb <-meanstats.re("may7_mala_weights_sub_adapt1_diffinit", c(2:4,7:10), mala_if=FALSE)
 # write.csv(stat.eb,paste0("/well/nichols/users/qcv214/bnn2/res3/pile/re_summary_may10_mala_near.csv"))
 # print("=========IG DONE=========")
 # stat.eb <-meanstats.re("apr27_sgld_bb_ig_a5_b0_V_200", c(1:10), mala_if=FALSE)
