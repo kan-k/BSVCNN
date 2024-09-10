@@ -35941,3 +35941,213 @@ Running
 re_summary_aug10_mala_near.csv  24328912_1
 
 
+#26 August 2024
+Try to re-run simulation for GPNN, look at nnvwb, nnvwb2, nnvwb4
+
+3 new files for simulation 
+`qcv214/bnn2/res3/sim/sigma/nnvwb_gpgp.R`
+`qcv214/bnn2/res3/sim/sigma/nnvwb_gpgp.R`
+`qcv214/bnn2/res3/sim/sigma/nnvwb_gpgp.R`
+
+Running
+//aug27_gpnn_init 8786712 (50 mins)
+//aug27_gpgp_init 8786700 (13 mins)  
+// aug27_gpols_init 8782366 (11 mins)
+
+//aug27_gpols_init_bbs 8783563
+//aug27_gpgp_init_bbs 8789501
+//aug27_gpnn_init 8787850
+
+##Plotting
+Bench mark is 4.58 (true GPR sd)
+###GPOLS
+```{r}
+library(ggplot2)
+library(tidyr)
+
+num.it <-500*4
+runs <- c(1:10)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug27_gpols_init_bbs_loss__jobid_",i,".csv")))[,1:num.it]
+ }
+
+# Assuming resdat is your dataframe
+# Add a row identifier
+resdat <- as.data.frame(sqrt(res.mat[2,,]))
+
+####
+final_250_medians <- apply(resdat[, (ncol(resdat) - 249):ncol(resdat)], 1, median)
+# Step 2: Compute the median and standard deviation across all rows of the previously derived medians
+overall_median <- median(final_250_medians)
+overall_sd <- sd(final_250_medians)
+# Print the results
+cat("Median of medians:", overall_median, "\n")
+cat("Standard deviation of medians:", overall_sd, "\n")
+###
+
+colnames(resdat) <- 1:ncol(resdat)
+resdat$row_id <- seq_len(nrow(resdat))
+# Reshape the data to long format
+resdat_long <- pivot_longer(resdat, cols = -row_id, names_to = "column", values_to = "value")
+# Create the line plot
+ggplot(resdat_long, aes(x = as.numeric(column), y = value, group = row_id, color = as.factor(row_id))) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, max(as.numeric(resdat_long$column)), by = 500)) +
+  # ylim(0.99,1.1) +
+  theme_minimal() +
+  labs(title = "Test RMSE", x = "iterations", y = "Value", color = "Run number")
+
+resdat <- as.data.frame(sqrt(res.mat[1,,]))
+####
+final_250_medians <- apply(resdat[, (ncol(resdat) - 249):ncol(resdat)], 1, median)
+# Step 2: Compute the median and standard deviation across all rows of the previously derived medians
+overall_median <- median(final_250_medians)
+overall_sd <- sd(final_250_medians)
+# Print the results
+cat("Median of medians:", overall_median, "\n")
+cat("Standard deviation of medians:", overall_sd, "\n")
+###
+
+colnames(resdat) <- 1:ncol(resdat)
+resdat$row_id <- seq_len(nrow(resdat))
+# Reshape the data to long format
+resdat_long <- pivot_longer(resdat, cols = -row_id, names_to = "column", values_to = "value")
+# Create the line plot
+ggplot(resdat_long, aes(x = as.numeric(column), y = value, group = row_id, color = as.factor(row_id))) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, max(as.numeric(resdat_long$column)), by = 500)) +
+  # ylim(0.88,1.1) +
+  theme_minimal() +
+  labs(title = "Train RMSE",x = "iterations", y = "Value", color = "Run number")
+```
+
+
+
+###GPNN
+```{r}
+library(ggplot2)
+library(tidyr)
+
+num.it <-500*4
+runs <- c(1:10)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug27_gpnn_init_bbs_loss__jobid_",i,".csv")))[,1:num.it]
+ }
+
+# Assuming resdat is your dataframe
+# Add a row identifier
+resdat <- as.data.frame(sqrt(res.mat[2,,]))
+
+####
+final_250_medians <- apply(resdat[, (ncol(resdat) - 249):ncol(resdat)], 1, median)
+# Step 2: Compute the median and standard deviation across all rows of the previously derived medians
+overall_median <- median(final_250_medians)
+overall_sd <- sd(final_250_medians)
+# Print the results
+cat("Median of medians:", overall_median, "\n")
+cat("Standard deviation of medians:", overall_sd, "\n")
+###
+
+colnames(resdat) <- 1:ncol(resdat)
+resdat$row_id <- seq_len(nrow(resdat))
+# Reshape the data to long format
+resdat_long <- pivot_longer(resdat, cols = -row_id, names_to = "column", values_to = "value")
+# Create the line plot
+ggplot(resdat_long, aes(x = as.numeric(column), y = value, group = row_id, color = as.factor(row_id))) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, max(as.numeric(resdat_long$column)), by = 500)) +
+  # ylim(0.99,1.1) +
+  theme_minimal() +
+  labs(title = "Test RMSE", x = "iterations", y = "Value", color = "Run number")
+
+resdat <- as.data.frame(sqrt(res.mat[1,,]))
+
+####
+final_250_medians <- apply(resdat[, (ncol(resdat) - 249):ncol(resdat)], 1, median)
+# Step 2: Compute the median and standard deviation across all rows of the previously derived medians
+overall_median <- median(final_250_medians)
+overall_sd <- sd(final_250_medians)
+# Print the results
+cat("Median of medians:", overall_median, "\n")
+cat("Standard deviation of medians:", overall_sd, "\n")
+###
+
+colnames(resdat) <- 1:ncol(resdat)
+resdat$row_id <- seq_len(nrow(resdat))
+# Reshape the data to long format
+resdat_long <- pivot_longer(resdat, cols = -row_id, names_to = "column", values_to = "value")
+# Create the line plot
+ggplot(resdat_long, aes(x = as.numeric(column), y = value, group = row_id, color = as.factor(row_id))) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, max(as.numeric(resdat_long$column)), by = 500)) +
+  # ylim(0.88,1.1) +
+  theme_minimal() +
+  labs(title = "Train RMSE",x = "iterations", y = "Value", color = "Run number")
+```
+How is gpnn worse than gpols
+###GPGP
+```{r}
+library(ggplot2)
+library(tidyr)
+
+num.it <-500*4
+runs <- c(1:10)
+res.mat <- array(,dim=c(2,length(runs),num.it))
+for(i in runs){
+  res.mat[,which(i==runs),] <- as.matrix(read.csv(paste0("/well/nichols/users/qcv214/bnn2/res3/pile/sim_aug27_gpgp_init_bbs_loss__jobid_",i,".csv")))[,1:num.it]
+ }
+
+# Assuming resdat is your dataframe
+# Add a row identifier
+resdat <- as.data.frame(sqrt(res.mat[2,,]))
+
+####
+final_250_medians <- apply(resdat[, (ncol(resdat) - 249):ncol(resdat)], 1, median)
+# Step 2: Compute the median and standard deviation across all rows of the previously derived medians
+overall_median <- median(final_250_medians)
+overall_sd <- sd(final_250_medians)
+# Print the results
+cat("Median of medians:", overall_median, "\n")
+cat("Standard deviation of medians:", overall_sd, "\n")
+###
+
+colnames(resdat) <- 1:ncol(resdat)
+resdat$row_id <- seq_len(nrow(resdat))
+# Reshape the data to long format
+resdat_long <- pivot_longer(resdat, cols = -row_id, names_to = "column", values_to = "value")
+# Create the line plot
+ggplot(resdat_long, aes(x = as.numeric(column), y = value, group = row_id, color = as.factor(row_id))) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, max(as.numeric(resdat_long$column)), by = 500)) +
+  # ylim(0.99,1.1) +
+  theme_minimal() +
+  labs(title = "Test RMSE", x = "iterations", y = "Value", color = "Run number")
+
+resdat <- as.data.frame(sqrt(res.mat[1,,]))
+
+####
+final_250_medians <- apply(resdat[, (ncol(resdat) - 249):ncol(resdat)], 1, median)
+# Step 2: Compute the median and standard deviation across all rows of the previously derived medians
+overall_median <- median(final_250_medians)
+overall_sd <- sd(final_250_medians)
+# Print the results
+cat("Median of medians:", overall_median, "\n")
+cat("Standard deviation of medians:", overall_sd, "\n")
+###
+
+colnames(resdat) <- 1:ncol(resdat)
+resdat$row_id <- seq_len(nrow(resdat))
+# Reshape the data to long format
+resdat_long <- pivot_longer(resdat, cols = -row_id, names_to = "column", values_to = "value")
+# Create the line plot
+ggplot(resdat_long, aes(x = as.numeric(column), y = value, group = row_id, color = as.factor(row_id))) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(0, max(as.numeric(resdat_long$column)), by = 500)) +
+  # ylim(0.88,1.1) +
+  theme_minimal() +
+  labs(title = "Train RMSE",x = "iterations", y = "Value", color = "Run number")
+```
+
+
